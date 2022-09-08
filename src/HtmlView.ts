@@ -21,15 +21,14 @@ export class HtmlView extends FileView {
 	
 	try {
 		// whole HTML file strings
-		const contents = await this.app.vault.adapter.read(file.path);
+		//const contents = await this.app.vault.adapter.read(file.path);
+		const contents = await this.app.vault.read(file);
 		
 		// Obsidian's HTMLElement and Node API: https://github.com/obsidianmd/obsidian-api/blob/master/obsidian.d.ts
 		// Note: some failed trials
 		//   1. xmldom's DOMParser: error. not Node type...
 		//   2. ReactDOM: extra unnecessary elements would display.
-		var tmp = this.contentEl.createDiv();  // createEl('div');
-		tmp.innerHTML = contents;
-		this.contentEl.appendChild(tmp.firstChild);
+		this.contentEl.insertAdjacentHTML("beforeend", contents);
 	} catch (error) {
 		showError(error);
 	}
@@ -52,7 +51,7 @@ export class HtmlView extends FileView {
   }
 }
 
-export function showError(e: Error): void {
+export async function showError(e: Error): Promise<void> {
     const notice = new Notice("", 8000);
 	// @ts-ignore
 	notice.noticeEl.innerHTML = `<b>HTML reader Error</b>:<br/>${e.message}`;
