@@ -14,5 +14,7 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 
 ### Manually installing the plugin
 
-- Copy the `main.js` and `manifest.json` files to your vault `<path>/<to>/<VaultFolder>/.obsidian/plugins/obsidian-html-plugin/`.
+1. Copy the `main.js` and `manifest.json` files to your vault `<path>/<to>/<VaultFolder>/.obsidian/plugins/obsidian-html-plugin/`.
+2. Reload Obsidian.
+3. Head to "Settings" → "third-party plugins", make sure safe mode is off and enable this plugin from there.
 
