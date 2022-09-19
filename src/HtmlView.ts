@@ -28,7 +28,29 @@ export class HtmlView extends FileView {
 		// Note: some failed trials
 		//   1. jsdom, xmldom's DOMParser: error. not Node type...
 		//   2. ReactDOM: extra unnecessary elements would display.
-		// https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md#avoid-innerhtml-outerhtml-and-insertadjacenthtml Hmmm... re-invent HTMLElement, and not compatible with standard HTML facilities...
+			
+		/*
+		// disable some elements to avoid XSS attacks
+		DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+			if (node.nodeName ) {
+				switch(node.nodeName) {
+					case 'INPUT':
+					case 'BUTTON':
+					case 'TEXTAREA':
+					case 'SELECT':
+						node.setAttribute('disabled', 'disabled');
+						break;
+				}
+			}
+		});
+		
+		// some HTML files would not be able to scroll
+		const cleanDom = DOMPurify.sanitize( contents, {RETURN_DOM: true} ); // return DOM object
+		this.contentEl.appendChild( cleanDom );
+		
+		DOMPurify.removeHook('afterSanitizeAttributes');
+		*/
+		
 		// const cleanContents = DOMPurify.sanitize(contents, { USE_PROFILES: { html: true } });
 		const cleanContents = DOMPurify.sanitize(contents); // sanitize HTML, svg, MathML codes
 		this.contentEl.insertAdjacentHTML("beforeend", cleanContents);
