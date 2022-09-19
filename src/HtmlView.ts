@@ -30,21 +30,27 @@ export class HtmlView extends FileView {
 		//   2. ReactDOM: extra unnecessary elements would display.
 			
 		/*
-		// disable some elements to avoid XSS attacks
 		DOMPurify.addHook('afterSanitizeAttributes', function (node) {
-			if (node.nodeName ) {
+			if(node.nodeName) {
 				switch(node.nodeName) {
 					case 'INPUT':
 					case 'BUTTON':
 					case 'TEXTAREA':
 					case 'SELECT':
+						// disable some elements to avoid XSS attacks
 						node.setAttribute('disabled', 'disabled');
+						break;
+						
+					case 'BODY':
+						// avoid some HTML files unable to scroll, only when 'overflow' is not set(or maybe invalid value sanitized by DOMPurify)
+						if( node.style.overflow === '' )
+							node.style.overflow = 'auto';
 						break;
 				}
 			}
 		});
 		
-		// some HTML files would not be able to scroll
+		// some HTML files would unable to scroll when <body>'s overflow style is not set
 		const cleanDom = DOMPurify.sanitize( contents, {RETURN_DOM: true} ); // return DOM object
 		this.contentEl.appendChild( cleanDom );
 		
