@@ -42,15 +42,19 @@ export class HtmlView extends FileView {
 						break;
 						
 					case 'BODY':
-						// avoid some HTML files unable to scroll, only when 'overflow' is not set(or maybe invalid value sanitized by DOMPurify)
+						// avoid some HTML files unable to scroll, only when 'overflow' is not set
 						if( node.style.overflow === '' )
 							node.style.overflow = 'auto';
+						
+						// avoid some HTML files unable to select text, only when 'user-select' is not set
+						if( node.style.userSelect === '' )
+							node.style.userSelect = 'text';
 						break;
 				}
 			}
 		});
 		
-		// some HTML files would unable to scroll when <body>'s overflow style is not set
+		// some HTML files would unable to scroll when <body>'s "overflow" style is not set(or maybe invalid value sanitized by DOMPurify):
 		const cleanDom = DOMPurify.sanitize( contents, {RETURN_DOM: true} ); // return DOM object
 		this.contentEl.appendChild( cleanDom );
 		
@@ -59,6 +63,7 @@ export class HtmlView extends FileView {
 		
 		// const cleanContents = DOMPurify.sanitize(contents, { USE_PROFILES: { html: true } });
 		const cleanContents = DOMPurify.sanitize(contents); // sanitize HTML, svg, MathML codes
+		// some HTML files would unable to select text
 		this.contentEl.insertAdjacentHTML("beforeend", cleanContents);
 		// this.contentEl.setHTML(cleanContents); // not supported yet, need Chrome 105+(maybe obsidian 0.20+ ?)
 	} catch (error) {
