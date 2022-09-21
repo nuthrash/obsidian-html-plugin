@@ -28,18 +28,29 @@ export class HtmlView extends FileView {
 		// Note: some failed trials
 		//   1. jsdom, xmldom's DOMParser: error. not Node type...
 		//   2. ReactDOM: extra unnecessary elements would display.
+		
+		// https://github.com/cure53/DOMPurify
+		// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/dompurify/index.d.ts
+		const purifyConfig = {
+			RETURN_DOM: true,        // return DOM object 
+			WHOLE_DOCUMENT: true,    // include <html>
 			
-		/*
+			// Default TAGs ATTRIBUTEs allow list & blocklist https://github.com/cure53/DOMPurify/wiki/Default-TAGs-ATTRIBUTEs-allow-list-&-blocklist
+			// allowed tags https://github.com/cure53/DOMPurify/blob/main/src/tags.js
+			ADD_TAGS: ['link'],  // allow external css files
+			// allowed attributes https://github.com/cure53/DOMPurify/blob/main/src/attrs.js
+		};
+		
 		DOMPurify.addHook('afterSanitizeAttributes', function (node) {
 			if(node.nodeName) {
 				switch(node.nodeName) {
-					case 'INPUT':
-					case 'BUTTON':
-					case 'TEXTAREA':
-					case 'SELECT':
-						// disable some elements to avoid XSS attacks
-						node.setAttribute('disabled', 'disabled');
-						break;
+					// disable some interactive elements to avoid XSS attacks
+					// case 'INPUT':
+					// case 'BUTTON':
+					// case 'TEXTAREA':
+					// case 'SELECT':
+						// node.setAttribute('disabled', 'disabled');
+						// break;
 						
 					case 'BODY':
 						// avoid some HTML files unable to scroll, only when 'overflow' is not set
@@ -54,17 +65,12 @@ export class HtmlView extends FileView {
 			}
 		});
 		
-		// some HTML files would unable to scroll when <body>'s "overflow" style is not set(or maybe invalid value sanitized by DOMPurify):
-		const cleanDom = DOMPurify.sanitize( contents, {RETURN_DOM: true} ); // return DOM object
+		const cleanDom = DOMPurify.sanitize( contents, purifyConfig );
 		this.contentEl.appendChild( cleanDom );
+		DOMPurify.removeHook( 'afterSanitizeAttributes' );
 		
-		DOMPurify.removeHook('afterSanitizeAttributes');
-		*/
-		
-		// const cleanContents = DOMPurify.sanitize(contents, { USE_PROFILES: { html: true } });
-		const cleanContents = DOMPurify.sanitize(contents); // sanitize HTML, svg, MathML codes
-		// some HTML files would unable to select text
-		this.contentEl.insertAdjacentHTML("beforeend", cleanContents);
+		// const cleanContents = DOMPurify.sanitize(contents); // sanitize HTML, svg, MathML codes to string
+		// this.contentEl.insertAdjacentHTML("beforeend", cleanContents);
 		// this.contentEl.setHTML(cleanContents); // not supported yet, need Chrome 105+(maybe obsidian 0.20+ ?)
 	} catch (error) {
 		showError(error);
