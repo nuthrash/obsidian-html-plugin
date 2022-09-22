@@ -30,5 +30,6 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 
 ## Known issues
 
-- Cannot see local image files such as `<img src="./image1.jpg" />` or `<img src="file:///C:/image1.jpg" />`
-  - This is Obsidian's constraint, it disallow to directly access local files through HTML code. Maybe the remedy way is re-save it as a complete HTML file by dedicated browser extensions such as "SingleFile", it can save a complete page (with CSS, images, fonts, frames, etc.) as a single HTML file. After you got the complete HTML file, put it to your vault folder then open it, you would see all images.
+- Cannot see local image files like `<img src="./image1.jpg" />` or `<img src="file:///C:/image1.jpg" />`
+  - This is Obsidian's constraint, it disallow to directly access local files through HTML code.
+  - One of the remedy ways is re-save the HTML file as a complete HTML file by dedicated browser extensions such as "[SingleFile](https://github.com/gildas-lormeau/SingleFile)", it can save a complete page (with CSS, images, fonts, frames, etc.) as a single HTML file. After got the complete HTML file, put it to obsidian-html-plugin installed vault folder then open it, you would see all images.
