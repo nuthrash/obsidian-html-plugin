@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, FileView, TFile, moment } from "obsidian";
+import { WorkspaceLeaf, FileView, TFile, sanitizeHTMLToDom } from "obsidian";
 import DOMPurify from 'dompurify';
 
 export const HTML_FILE_EXTENSIONS = ["html", "htm"];
@@ -8,7 +8,7 @@ export const ICON_HTML = "doc-html";
 export class HtmlView extends FileView {
   allowNoFile: false;
 
-  constructor(leaf: WorkspaceLeaf, private settings: HtmlPluginSettings) {
+  constructor(leaf: WorkspaceLeaf) {
     super(leaf);
   }
   
@@ -25,9 +25,6 @@ export class HtmlView extends FileView {
 		const contents = await this.app.vault.read(file);
 		
 		// Obsidian's HTMLElement and Node API: https://github.com/obsidianmd/obsidian-api/blob/master/obsidian.d.ts
-		// Note: some failed trials
-		//   1. jsdom, xmldom's DOMParser: error. not Node type...
-		//   2. ReactDOM: extra unnecessary elements would display.
 		
 		// https://github.com/cure53/DOMPurify
 		// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/dompurify/index.d.ts
@@ -65,13 +62,25 @@ export class HtmlView extends FileView {
 			}
 		});
 		
+		/*
+		// Obsidian's internal DOMPurify module
+		// const cleanDom = window.DOMpurify.sanitize( contents, purifyConfig ); // Cannot read properties of undefined(read 'sanitize')
+		
+		// window.DOMPurify.addHook('afterSanitizeAttributes'........
+		
+		// Some internal links like "#cite_1" would be replaced as "app://obsidian.md/index.html#cite_1"
+		window.DOMPurify.clearConfig();
+		window.DOMPurify.setConfig( purifyConfig );
+		const cleanDom = sanitizeHTMLToDom( contents );
+		this.contentEl.appendChild( cleanDom );
+		window.DOMPurify.clearConfig();
+		window.DOMPurify.removeHook( 'afterSanitizeAttributes' );
+		*/
+		
 		const cleanDom = DOMPurify.sanitize( contents, purifyConfig );
 		this.contentEl.appendChild( cleanDom );
 		DOMPurify.removeHook( 'afterSanitizeAttributes' );
 		
-		// const cleanContents = DOMPurify.sanitize(contents); // sanitize HTML, svg, MathML codes to string
-		// this.contentEl.insertAdjacentHTML("beforeend", cleanContents);
-		// this.contentEl.setHTML(cleanContents); // not supported yet, need Chrome 105+(maybe obsidian 0.20+ ?)
 	} catch (error) {
 		showError(error);
 	}
@@ -97,5 +106,6 @@ export class HtmlView extends FileView {
 export async function showError(e: Error): Promise<void> {
     const notice = new Notice("", 8000);
 	// @ts-ignore
-	notice.noticeEl.innerHTML = `<b>HTML reader Error</b>:<br/>${e.message}`;
+	notice.noticeEl.createEl('strong', { text: 'HTML Reader error' });
+	notice.noticeEl.createDiv({ text: `${e.message}` });
 }
