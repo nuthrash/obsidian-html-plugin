@@ -4,6 +4,7 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 
 - [Obsidian HTML Reader Plugin](#obsidian-html-reader-plugin)
   - [How to use](#how-to-use)
+  - [Install this plugin from Obsidian](#install-this-plugin-from-obsidian)
   - [Manually installing the plugin](#manually-installing-the-plugin)
   - [How to build this plugin from source code](#how-to-build-this-plugin-from-source-code)
   - [Known issues](#known-issues)
@@ -14,12 +15,20 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 2. Click any HTML or HTM item to open it
 3. Reading
 
+## Install this plugin from Obsidian
+
+1. Head to "Settings" ⇨ "Community plugins" options page, make sure "Restricted mode" is turned off.
+2. Click `Browse` button to open Community plugins browsing dialog.
+3. Search for this plugin "**HTML Reader**" and click the corresponding result item.
+4. Click `Install` button to install this plugin.
+5. Once installed, click `Enable` button to enable this plugin.
+6. Or, enable this plugin "**HTML Reader**" from the "Installed plugins" list of "Community plugins" options page.
 
 ## Manually installing the plugin
 
 1. Copy the `main.js` and `manifest.json` files to your vault `<path>/<to>/<vaultFolder>/.obsidian/plugins/obsidian-html-plugin/`.
 2. Relaunch Obsidian.
-3. Head to "Settings" ⇨ "Community plugins", make sure "Restricted mode" is turned off and enable this plugin "**HTML Reader**" from the "Installed plugins" list.
+3. Head to "Settings" ⇨ "Community plugins" options page, make sure "Restricted mode" is turned off and enable this plugin "**HTML Reader**" from the "Installed plugins" list.
 
 
 ## How to build this plugin from source code
