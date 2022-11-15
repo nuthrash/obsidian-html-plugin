@@ -1,5 +1,4 @@
 import { WorkspaceLeaf, FileView, TFile, sanitizeHTMLToDom } from "obsidian";
-import sanitizeHtml from 'sanitize-html';
 
 import { extract } from "single-filez-core/processors/compression/compression-extract.js";
 import * as zip from  '@zip.js/zip.js';
@@ -7,6 +6,7 @@ import * as zip from  '@zip.js/zip.js';
 export const HTML_FILE_EXTENSIONS = ["html", "htm"];
 export const VIEW_TYPE_HTML = "html-view";
 export const ICON_HTML = "doc-html";
+
 
 export class HtmlView extends FileView {
   allowNoFile: false;
@@ -42,32 +42,11 @@ export class HtmlView extends FileView {
 			const decoder = new TextDecoder();
 			htmlStr = decoder.decode(contents); // decode with UTF8
 		}
-					
-		// https://github.com/apostrophecms/sanitize-html
-		// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/sanitize-html/index.d.ts
-		const purifyConfig = {
-						allowedTags: false,  // allow all tags
-						
-						// allowedAttributes: false, // allow all attributes // {}, // disallow all attributes
-						allowedAttributes: {
-							'*': ALLOWED_ATTRS
-						},
-
-						allowedClasses: false, // allow all classes
-						// allowedStyles: false, // allow all styles
-						
-						allowedIframeHostnames: false, // allow all Iframe Hostnames ['www.youtube.com', 'player.vimeo.com']
-
-						// default allowed schemes: http, https, ftp, mailto
-						allowedSchemes: sanitizeHtml.defaults.allowedSchemes.concat([ 'app', 'callto', 'cid', 'data', 'ftps', 'tel', 'xmpp' ])
-					};
-		
-		const cleanHtml = sanitizeHtml( htmlStr, purifyConfig );
 			
 		// using Obsidian's internal DOMParser to build Declarative Shadow DOM
-		const domW = new window.DOMParser().parseFromString(cleanHtml, 'text/html', { includeShadowRoots: true });
+		const domW = (new window.DOMParser()).parseFromString(htmlStr, 'text/html', { includeShadowRoots: true });
 		
-		await applyPatches( domW );
+		await sanitizeAndApplyPatches( domW );
 		
 		const contentDiv = this.contentEl.createDiv();
 		
@@ -75,29 +54,32 @@ export class HtmlView extends FileView {
 		contentDiv.setAttribute( 'style', 'transform: scale(1);' );
 		let shadow = contentDiv.attachShadow({mode: 'open'});
 		
-		// while clicking, fix internal links(in-place anchor) replaced by Obsidian at runtime
-		shadow.addEventListener('click', (event) => {
-							const elem = event.target, appAddr = "app://obsidian.md/index.html#";
-						
-							function scrollAnchorRecursive(node) {
-								if( node == null || node.nodeName == null || node.nodeName === "BODY" )
-									return;
-								
-								if( node.nodeName === 'A' ) {
-									if( node.href && node.href.startsWith(appAddr) ) {
-										const idInteral = decodeURIComponent( node.href.slice(appAddr.length) );
-										
-										const targetElem = node.getRootNode().getElementById( idInteral );
-										if( targetElem )
-											targetElem.scrollIntoView();
-									}
-								} else {
-									return scrollAnchorRecursive(node.parentNode);
-								}
-							}
+		// while clicking, fix internal links(in-page anchor) replaced by Shadow Root at runtime
+		shadow.addEventListener('click', (evt) => {	
+					for( const elm of evt.composedPath() ) {
+						if( elm instanceof HTMLAnchorElement == false )
+							continue;
 							
-							return scrollAnchorRecursive(elem)
-						});
+						// ignore non-internal link
+						if( !elm.href || !elm.hash || elm.hash.length <= 1 )
+							continue;
+						
+						let idInteral = null;
+						if( elm.pathname === '/' ) {
+							// http://localhost/#xxxxx at Mobile version of Obsidian
+							idInteral = decodeURIComponent( elm.hash.slice(1) );
+						} else if ( elm.href.startsWith(desktopAppAddr) ) {
+							// app://obsidian.md/index.html#xxxxx at Desktop version of Obsidian
+							idInteral = decodeURIComponent( elm.href.slice(desktopAppAddr.length) );
+						}
+						
+						const targetElm = elm.getRootNode().getElementById( idInteral );
+						if( targetElm )
+							targetElm.scrollIntoView();
+							
+						return; // all done
+					}
+				});
 		
 		shadow.appendChild( domW.documentElement );
 	
@@ -123,81 +105,118 @@ export class HtmlView extends FileView {
   }
 }
 
-// return Map's each item => [0] for variableName, [1] for it's valueContent
-async function cutCssVariables( doc: HTMLDocument, cssElementName: string, removeVar: boolean ) : Map<string, string> {
-	let map = new Map<string, string>();
+
+async function sanitizeAndApplyPatches( doc: HTMLDocument ) : Promise<void> {
+	const cssRootSelector = ":root";
+	const cssVars = new Map<string, string>();
+	const removeSet = new Set<CSSStyleDeclaration>();
 	
-	// Obsidian's internal DOMParser does not genreate HTMLDocument's styleSheets property,
-	// therefore all style sheets shall be collected by other way!
-	
-	let allStyles = doc.getElementsByTagName('style');
-	if( !allStyles || allStyles.length <= 0 )
-		return map;
-	
-	let removeSet = new Set<CSSStyleDeclaration>();
-	Array.from(allStyles).forEach( (styleEle) => {
-		try {
-			Array.from(styleEle.sheet.cssRules).forEach((rule) => {
-				// type 1 is CSSStyleRule https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleRule
-				if( rule.type != 1 || rule.selectorText !== cssElementName )
-					return;
-					
-				// rule.style is CSSStyleDeclaration https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration
-				for( const propName of rule.style ) {
-					let pn = propName.trim();
-					if( !pn.startsWith("--") )
-						continue;
-					
-					if( !map.has(pn) ) {
-						map.set( pn, rule.style.getPropertyValue(propName).trim() );
-					}
-					if( removeVar && !removeSet.has(rule.style) )
-						removeSet.add( rule.style );
-				}
-			});
-		} catch {
-			//ignore different domain of styleSheet.href
+	for( const elm of doc.all ) {
+		let illSet = new Set<string>();
+		for( const attr of elm.attributes ) {
+			let name = attr.name;
+			if( name.indexOf('-') > 0 )
+				name = `${name.split('-')[0]}-*`;
+				
+			if( !ALLOWED_ATTRS.contains(name) && !illSet.has(attr.name) )
+				illSet.add( attr.name );
 		}
-	});
+		
+		for( const attrName of illSet ) {
+			elm.removeAttribute( attrName );
+		}
+		
+		if( elm.instanceOf(HTMLStyleElement) ) {
+			try {
+				Array.from(elm.sheet.cssRules).forEach((rule) => {
+					// type 1 is CSSStyleRule https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleRule
+					if( rule.type != 1 || !rule.selectorText.contains(cssRootSelector) )
+						return;
+						
+					// rule.style is CSSStyleDeclaration https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration
+					for( const propName of rule.style ) {
+						let pn = propName.trim();
+						
+						if( !pn.startsWith("--") )
+							continue;
+						
+						if( !cssVars.has(pn) ) {
+							cssVars.set( pn, rule.style.getPropertyValue(propName).trim() );
+						}
+						if( !removeSet.has(rule.style) )
+							removeSet.add( rule.style );
+					}
+				});
+			} catch {
+				//ignore different domain of styleSheet.href
+			}
+		}
+		
+		
+		if( elm.instanceOf(HTMLIFrameElement) ) {
+			if( elm.src && elm.src !== "about:blank" ) {
+				// avoid XSS attack
+				try {
+					let url = new URL( elm.src );
+					if( url.protocol.contains("javascript:") )
+						elm.removeAttribute( 'src' );
+				} catch {
+					elm.removeAttribute( 'src' );
+				}
+			}
+			
+			// force apply all restrictions
+			elm.setAttribute( 'sandbox', '' );
+		}
+		
+		if( elm.instanceOf(HTMLAnchorElement) ) {
+			// ESLint 
+			if( elm.target === '_blank') {
+				if( !elm.rel.contains('noopener') )
+					elm.rel += ' noopener';
+				if( !elm.rel.contains('noreferrer') )
+					elm.rel += ' noreferrer';
+			}
+			
+			// avoid XSS attack
+			if( elm.href && elm.protocol.contains("javascript:") ) {
+				elm.setAttribute( 'href', 'javascript:void(0)' );
+				elm.setAttribute( 'style', 'cursor: default;' );
+			}
+		}
+	}
+	
+	
+	const bodyElm = doc.body;
+	
+	// avoid some HTML files unable to scroll, only when 'overflow' is not set
+	if( bodyElm.style.overflow === '' )
+		bodyElm.style.overflow = 'auto';
+	// avoid some HTML files unable to select text, only when 'user-select' is not set
+	if( bodyElm.style.userSelect === '' )
+		bodyElm.style.userSelect = 'text';
+		
 	
 	// remove old variables and its content
-	if( removeVar && removeSet.size > 0 && map.size > 0 ) {
+	if( removeSet.size > 0 && cssVars.size > 0 ) {
 		for( const style of removeSet ) {
-			for( const kvp of map ) {
+			for( const kvp of cssVars ) {
 				if( style.cssText.contains(kvp[0]) )
 					style.removeProperty( kvp[0] );
 			}
 		}
 	}
 	
-	return map;
-}
-
-async function applyPatches( doc: HTMLDocument ): Promise<void> {
-	const bodyEle = doc.body;
-	
-	// avoid some HTML files unable to scroll, only when 'overflow' is not set
-	if( bodyEle.style.overflow === '' )
-		bodyEle.style.overflow = 'auto';
-	// avoid some HTML files unable to select text, only when 'user-select' is not set
-	if( bodyEle.style.userSelect === '' )
-		bodyEle.style.userSelect = 'text';
-		
-	// fix CSS :root global variables to :host for Shadow DOM
-	let cssVars = await cutCssVariables( doc, ":root", true );
+	// move CSS :root global variables to :host for Shadow DOM
 	if( cssVars.size > 0  ) {
-		const hostVars = Array.from(cssVars).map( cssVar => `${cssVar[0]}: ${cssVar[1]}` ).join('; ') + ";";
+		const hostVars = Array.from(cssVars).map( cssVar => `${cssVar[0]}: ${cssVar[1]}` ).join('; ');
 		const styleEle = doc.createElement( "style" );
-		styleEle.innerText = `:host { ${hostVars} }`;
-		bodyEle.appendChild( styleEle );
+		styleEle.textContent = `:host { ${hostVars}; }`;
+		bodyElm.appendChild( styleEle );
 	}
-
-	// ESLint 
-	Array.from(doc.links).forEach( (ele) => {
-		if( ele.instanceOf(HTMLAnchorElement) && ele.getAttribute("target") === "_blank" )
-			ele.setAttribute( "rel", "noreferrer noopener" );
-	});
 }
+
+const desktopAppAddr = "app://obsidian.md/index.html#";
 
 export const ALLOWED_ATTRS = [
 	// default allowed attributes of sanitize-html
@@ -214,7 +233,7 @@ export const ALLOWED_ATTRS = [
 	'xlink:href', 'xml:id', 'xlink:title', 'xml:space', 'xmlns:xlink',
 
 	// default allowed attributes by this plugin
-	'async', 'charset', 'collapse', 'collapsed', 'content', 'data', 'defer', 'external', 'http-equiv', 'property', 'sandbox', 'scoped', 'shadowroot', 'text', 'url', 'var',
+	'async', 'charset', 'collapse', 'collapsed', 'content', 'data', 'defer', 'external', 'frameborder', 'http-equiv', 'property', 'sandbox', 'scoped', 'scrolling', 'shadowroot', 'text', 'url', 'var',
 	'aria-*', 'data-*', 'href-*', 'src-*', 'style-*',
 ];
 
