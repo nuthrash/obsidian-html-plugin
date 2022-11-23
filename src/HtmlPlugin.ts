@@ -1,8 +1,12 @@
 import { addIcon, Plugin, WorkspaceLeaf } from 'obsidian';
 import { HtmlView, showError, HTML_FILE_EXTENSIONS, ICON_HTML, VIEW_TYPE_HTML } from './HtmlView';
+import { HtmlPluginSettings, HtmlSettingTab, DEFAULT_SETTINGS } from './HtmlPluginSettings';
 
 export default class HtmlPlugin extends Plugin {
+	settings: HtmlPluginSettings;
+	
 	async onload() {
+		await this.loadSettings();
 
 		// Add your own icon: https://marcus.se.net/obsidian-plugin-docs/user-interface/icons#add-your-own-icon
 		/*
@@ -10,7 +14,7 @@ export default class HtmlPlugin extends Plugin {
 		*/
 
 		this.registerView(VIEW_TYPE_HTML, (leaf: WorkspaceLeaf) => {
-			return new HtmlView(leaf);
+			return new HtmlView(leaf, this.settings);
 		});
 
 		try {
@@ -18,8 +22,18 @@ export default class HtmlPlugin extends Plugin {
 		} catch (error) {
 			await showError(`File extensions ${HTML_FILE_EXTENSIONS} had been registered by other plugin!`);
 		}
+		
+		this.addSettingTab(new HtmlSettingTab(this.app, this));
 	}
 
 	onunload() {
+	}
+
+	async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
 	}
 }
