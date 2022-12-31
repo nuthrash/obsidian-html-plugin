@@ -36,6 +36,7 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 1. Head to ⚙"Settings" ⇨ "Community plugins" options page, find the settings icon ⚙ of "**HTML Reader**" item, then click it.
 2. Or, Head to ⚙"Settings" ⇨ click "**HTML Reader**" item on the bottom of left panel under the "Community plugins" group after enabled it.
 
+
 ### Operating Mode
 
 ![OperatingModeSettings1.jpg](./assets/images/screenshots/OperatingModeSettings1.jpg "HTML Reader Setting part1") 
@@ -47,45 +48,51 @@ Set Operating Mode (a.k.a **OpMode**) for this plugin to protect user and app.
 |                          | Images | Styles  | Scripting             | DSD<sup>*</sup>  | CSP<sup>#</sup> | HTML Sanitization | Isolated |
 |         ---:             | :---:  | :---:   | :---:                 | :---:            | :---: | :---: | :---: |
 | **Text Mode**            | No     | No      | No                    | Yes              | Yes | Yes | Yes |
-| **High Restricted Mode** | Yes    | Partial | No                    | Yes              | Yes | Yes | Yes |
+| **High Restricted Mode** | Yes<sup>[1]</sup> | Partial | No         | Yes              | Yes | Yes | Yes |
 | **Balance Mode**         | Yes    | Yes     | No                    | Yes              | Yes | Yes | Yes |
-| **Low Restricted Mode**  | Yes    | Yes     | Partial<sup>[1]</sup> | Yes              | No | No | Yes |
-| **Unrestricted Mode**    | Yes    | Yes     | Yes<sup>[2]</sup>     | No<sup>[3]</sup> | No | No | No |
+| **Low Restricted Mode**  | Yes    | Yes     | Partial<sup>[2]</sup> | Yes              | No  | No  | Yes |
+| **Unrestricted Mode**    | Yes    | Yes     | Yes<sup>[3]</sup>     | Yes              | No  | No  | Yes |
 
 *: [Declarative Shadow DOM](https://web.dev/declarative-shadow-dom/) <br />
 #: [Content Security Policy](https://en.wikipedia.org/wiki/Content_Security_Policy) <br />
-[1]: The script codes inside `<script>` and external script files are still not executable. <br />
-[2]: The external script files may not executable due to Obsidian's limitation. <br />
-[3]: The DSD elements would showing normally by polyfill scripts. <br />
+[1]: The external image sources would be blocked by CSP.<br />
+[2]: The script codes inside `<script>` and external script files are still not executable. <br />
+[3]: The external script files may not executable due to Obsidian's limitation. <br />
 
-#### Detail Explanation
+<details>
+<summary><h4>Detail Explanation</h4></summary>
 
-1. **Text Mode** - Highly recommended for the files came from untrusted source! This mode almost sanitized all visual effects, script codes, and styles out. Meanwhile, it keeps text parts to see the content of HTML files with HTML layout elements.
-2. **High Restricted Mode** - This mode recommended for the user who wants more security. It would keep custom elements but sanitize unsafe HTML elements out, as well as unsafe attributes and their contents.
+1. **Text Mode** - Highly recommended for the files came from untrusted source! This mode almost sanitized all visual effects, script codes, and styles out. eanwhile, it keeps text parts for reading the content of HTML files with HTML layout elements.
+2. **High Restricted Mode** - This mode recommended for the user who wants more security. It would keep custom elements but sanitize unsafe HTML elements out, as well as unsafe attributes and their contents. The external image sources would be blocked by CSP, and the images are only available from the HTML files themselves.
 3. **Balance Mode** - This mode is the default mode for this plugin. It would keep all custom elements and HTML elements, but sanitize unsafe attributes and their contents out.
 4. **Low Restricted Mode** - This mode would not sanitize anything, all elements and their content would be keeped. The script codes inside `<script>` still not executable, nor the external script files.
-5. **Unrestricted Mode** - This mode is <ins> **very dangerous** and may cause the Obsidian app crash or disarrange layouts, **THE OBSIDIAN AND THIS PLUGIN CANNOT ASSUME RESPONSIBILITY OR LIABILITY FOR SWITCHING TO THIS MODE** </ins>. It would not sanitize anything, all elements and their content would be keeped. The Obsidian app itself might adjust something. The external script files may not executable due to Obsidian's limitation.
+5. **Unrestricted Mode** - This mode is <ins> **very dangerous** and may cause the Obsidian app crash, **THE OBSIDIAN AND THIS PLUGIN CANNOT ASSUME RESPONSIBILITY OR LIABILITY FOR SWITCHING TO THIS MODE** </ins>. It would not sanitize anything, all elements and their content would be keeped. The Obsidian app itself might adjust something. The external script files may not executable due to Obsidian's limitation. Strongly recommended not switching to this mode for normal usage.
 
     If you encounter troubles after switch to this mode, it is recommended to take these recovery steps:
     - Turn back to previous file which can open normally.
     - <ins>Delete or move the bad opened file to trash can. Otherwise, Obsidian would still open it after re-launched</ins>.
     - Return to this settings page to switch another Operating Mode.
   
-    Sometimes you still cannot see what you want, then you should check the content of HTML file. This mode is just leave the content alone, but the file might has some self-contained security protection facilities (such as CSP) and they would block something to avoid XSS attacks. If you find something like `<meta http-equiv="Content-Security-Policy" />` inside the HTML file, it means the file is protected by CSP mechanism. You might
+    Sometimes you still cannot see what you want, then you should check the content of HTML file. This mode is just leave the content alone (only <ins>adjust the external link anchor tags to let them open in default browser windows</ins>), but the file might has some self-contained security protection facilities (such as CSP) and they would block something to avoid XSS attacks. If you find something like `<meta http-equiv="Content-Security-Policy" />` inside the HTML file, it means the file is protected by CSP mechanism. You might
     - Modify or remove the CSP `<meta>` tag by hands.
     - Change the capture settings of the original web page saving app to disable CSP or something else, and re-save the web page.
 
-#### Terms Explanation
+</details>
+<details>
+<summary><h4>Terms Explanation</h4></summary>
+	
 This section would try to explain some terms used by Operating Mode more detail. You can ignore some terms without bold font face (they are technical terms).
 
 1. **Style**s - It means HTML [CSS](https://en.wikipedia.org/wiki/CSS) styles. They are almost safe to use, but CSS Injection or CSS Keylogger would steal something, so some <ins> user [interactive elements](https://html.spec.whatwg.org/multipage/interactive-elements.html) would be disabled at **Balance Mode** and **High Restricted Mode** </ins>.
 2. **Scripting** - It means [Javascript](https://en.wikipedia.org/wiki/Javascript) and very dangerous. Even some script codes would executable at **Low Restricted Mode** and **Unrestricted Mode**, this does not mean they can work very well. More complex of script codes, less chances they can work normally. <ins>If you want the script codes work as you wish, you shall rewrite them and related modules to satisfy Obsidian platform</ins>, because there are many different aspects between Obsidian platform and normal browsers.
-3. **DSD** - It means [Declarative Shadow DOM](https://web.dev/declarative-shadow-dom/). At **Unrestricted Mode**, the DSD elements shall bundle with related polyfill script codes to let them work normally.
+3. **DSD** - It means [Declarative Shadow DOM](https://web.dev/declarative-shadow-dom/).
 4. **CSP** - It means [Content Security Policy](https://en.wikipedia.org/wiki/Content_Security_Policy). It provides some “binding operational directives” to tell Obsidian how to treat some resources. Its rules are different with others used by normal browsers and websites, the `'self'` setting is almost meaningless for Obsidian.
 5. **HTML Sanitization** - This mechanism would physically sanitize unsafe content out when loading HTML files, and there are different configurations among three modes. The sanitization configurations are progressive and may change with version iteration. If you think some tags or attributes shall not be sanitized, you can create a new issue in [Issues page](https://github.com/nuthrash/obsidian-html-plugin/issues) to let me know.
-6. **Isolated** - The CSS styles of HTML files shall be isolated against with other parts of Obsidian, otherwise the Obsidian's layouts might be disarranged at **Unrestricted Mode**. The disadvantages of CSS isolation might cause some CSS effects lost, such as `:target` pseudo-class event would never be fired.
-7. Custom Element - It means the HTML tags look like `<xxx-yyy>` and are often incorporated with related javascript codes. Therefore, when the scripting are disallowed, the custom HTML tags are almost useless and would act as pure containers.
+6. **Isolated** - The CSS styles of HTML files shall be isolated against with other parts of Obsidian, otherwise the Obsidian's layouts might be disarranged or font faces might become ugly. The disadvantages of CSS isolation might cause some CSS effects lost, such as `:target` pseudo-class event would never be fired. You can get more details from the [CSS Isolation](https://github.com/nuthrash/obsidian-html-plugin/wiki/CSS-Isolation) wiki page.
+7. [Custom Element](https://developer.mozilla.org/docs/Web/Web_Components/Using_custom_elements) - It means the HTML tags look like `<xxx-yyy>` and they are often incorporated with related javascript codes. Therefore, when the scripting is disallowed, the custom HTML tags are almost useless and would act as pure containers.
 
+</details>
+	
 ## How to build this plugin from source code
 
 1. Clone this project to your system.
