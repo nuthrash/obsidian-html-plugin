@@ -93,6 +93,8 @@ This section would try to explain some terms used by Operating Mode more detail.
 
 </details>
 
+<br />
+
 
 ## How to build this plugin from source code
 
