@@ -92,7 +92,8 @@ This section would try to explain some terms used by Operating Mode more detail.
 7. [Custom Element](https://developer.mozilla.org/docs/Web/Web_Components/Using_custom_elements) - It means the HTML tags look like `<xxx-yyy>` and they are often incorporated with related javascript codes. Therefore, when the scripting is disallowed, the custom HTML tags are almost useless and would act as pure containers.
 
 </details>
-	
+
+
 ## How to build this plugin from source code
 
 1. Clone this project to your system.
