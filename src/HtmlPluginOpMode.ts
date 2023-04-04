@@ -16,7 +16,6 @@ export const OP_MODE_INFO_DATA: Record<string, string> = {
 }
 
 export const OP_MODE_INFO_HTML: string = `
-<pre><b>※ Remember to reload the file after change the mode.</b></pre>
 <style>
   #ophCompTable {
     border: 1px solid var(--table-border-color);
@@ -48,8 +47,10 @@ export const OP_MODE_INFO_HTML: string = `
     font-family: -apple-system, BlinkMacSystemFont, var(--font-monospace);
   }  
 </style>
+
+<details>
+<summary>Comparison</summary>
 <table id="ophCompTable">
-  <caption>Comparison<br></caption>
   <thead>
   <tr>
 	<th> </th>
@@ -121,8 +122,9 @@ export const OP_MODE_INFO_HTML: string = `
 <div>[1]: The external image sources would be blocked by CSP.</div>
 <div>[2]: The script codes inside <code>&lt;script&gt;</code> and external script files are still not executable.</div>
 <div>[3]: The external script files may not executable due to Obsidian's limitation.</div>
-
 <br />
+</details>
+
 <details>
 <summary>Detail Explanation</summary>
 <ol>

@@ -6,7 +6,9 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 - [Install this plugin from Obsidian](#install-this-plugin-from-obsidian)
 - [Manually installing the plugin](#manually-installing-the-plugin)
 - [HTML Reader Settings](#html-reader-settings)
-  - [Operating Mode](#operating-mode)
+  - [General Settings](#general-settings)
+  - [Hotkeys and Touch Gestures Settings](#hotkeys-and-touch-gestures-settings)
+- [More Options](#more-options)
 - [How to build this plugin from source code](#how-to-build-this-plugin-from-source-code)
 - [Known issues](#known-issues)
 
@@ -36,12 +38,13 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 1. Head to ⚙"Settings" ⇨ "Community plugins" options page, find the settings icon ⚙ of "**HTML Reader**" item, then click it.
 2. Or, Head to ⚙"Settings" ⇨ click "**HTML Reader**" item on the bottom of left panel under the "Community plugins" group after enabled it.
 
+![HtmlReadedSettings1.jpg](./assets/images/screenshots/HtmlReadedSettings1.jpg "HTML Reader Setting part1") 
 
-### Operating Mode
+### General Settings
 
-![OperatingModeSettings1.jpg](./assets/images/screenshots/OperatingModeSettings1.jpg "HTML Reader Setting part1") 
+#### Operating Mode
 
-Set Operating Mode (a.k.a **OpMode**) for this plugin to protect user and app.
+Set Operating Mode for this plugin to protect user and app.
 
 #### Comparsion
 
@@ -95,6 +98,36 @@ This section would try to explain some terms used by Operating Mode more detail.
 
 <br />
 
+### Hotkeys and touch gestures settings
+Almost all keyboard hotkeys are taken from Obsidian's global hotkey settings, so you shall modify them via Settings → Options → Hotkeys. <br>
+That means this plugin does not design any new configuration interface for keyboard hotkeys. And it just show the first two settings of corresponding hotkeys with readonly mode.
+
+#### Search document text
+Search current file.
+#### Zoom in document
+Zoom in current file.
+#### Zoom out document
+Zoom out current file.
+#### Reset document zoom
+Reset current file zoom.
+#### Quick document zoom in and out
+Zoom the document using Ctrl + Wheel (zoom in: ↑, zoom out: ↓), or using the trackpad/touch screen/touch panel two-finger pinch-zoom gesture (zoom in: ← →, zoom out: → ←).
+
+
+## More options
+After opening HTML files, the three dots "more options" menu icon on right-upper corner of tab would add some menu items.
+
+![MoreOptions1.jpg](./assets/images/screenshots/MoreOptions1.jpg "More Options part1")
+ 
+### Find...
+Open search bar.
+### Zoom in
+Zoom in current file.
+### Zoom out
+Zoom out current file.
+### Reset zoom
+Reset current file zoom.
+
 
 ## How to build this plugin from source code
 
@@ -130,5 +163,15 @@ This section would try to explain some terms used by Operating Mode more detail.
     2. Removed by HTML Sanitization mechanism
   - Obsidian's developer team is very concern about XSS attacks, so they want plugin developers follow this [tip](https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md#avoid-innerhtml-outerhtml-and-insertadjacenthtml) to prevent XSS attacks. Therefore, almost all script codes resident inside `<script>` in the HTML file would be blocked, and the external script files are the same.
   - Meanwhile, HTML Sanitization mechanism would sanitize potential XSS code more deeper. So, the code such as `<... onload="alert(1)">` would be removed.
-  - Therefore, you can switch to [less restricted modes](#operating-mode) to see if they work or not.
+  - Therefore, you could switch to [less restricted modes](#operating-mode) to see if they work or not.
 
+- Cannot zoom in or out by mouse wheel on mobile platforms
+  - It seems the Obsidian app block something on mobile platforms, so these actions would not work normally.
+  - You could use two-finger pinch-zoom gesture on the touch screen to zoom in or out.
+  - You could use the "[more options](#more-options)" menu items to zoom in or out.
+
+- The zoom related hotkey settings are disappeared on mobile platforms
+  - The mobile version of Obsidian does not provide these settings, so this plugin also not provide them.
+  
+- The presentation style of search results is different with Markdown documents
+  - There are lots tags/elements inside HTML files, and some search results would across tags and overlap with each others. Therefore, this plugin use the block mark style (highlight with background color) instead outline style.
