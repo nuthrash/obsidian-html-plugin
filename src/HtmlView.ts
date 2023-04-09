@@ -1,5 +1,5 @@
 import { WorkspaceLeaf, FileView, TFile, sanitizeHTMLToDom } from "obsidian";
-import { HtmlPluginSettings, HtmlPluginOpMode, isMacPlatform, DEFAULT_SETTINGS } from './HtmlPluginSettings';
+import { HtmlPluginSettings, HtmlPluginOpMode, isMacPlatform, isIosPlatform, DEFAULT_SETTINGS } from './HtmlPluginSettings';
 import { HtmlPluginOpMode } from './HtmlPluginOpMode';
 
 import { extract } from "single-filez-core/processors/compression/compression-extract.js";
@@ -378,7 +378,7 @@ function isUnselectableElement( elm: HTMLElement ): boolean {
 	return ((style.display === 'none') || (elm.offsetWidth === 0))
 }
 
-let isMacPlat = isMacPlatform();
+let isAppleSys = isMacPlatform() || isIosPlatform();
 function mapNativeHotkeys( app: App, cmdId: string ): Hotkey[] {
 	let ohks = app.hotkeyManager.getHotkeys(cmdId) || app.hotkeyManager.getDefaultHotkeys(cmdId);
 
@@ -395,7 +395,7 @@ function mapNativeHotkeys( app: App, cmdId: string ): Hotkey[] {
 			for( let mod of ohk.modifiers ) {
 				if( mod === 'Mod' ) {
 					// replace Obsidian's Mod modifier string to native platform's modifier
-					hk.modifiers.push( isMacPlat ? 'Meta' : 'Ctrl' );
+					hk.modifiers.push( isAppleSys ? 'Meta' : 'Ctrl' );
 				} else {
 					hk.modifiers.push( mod );
 				}
@@ -435,8 +435,8 @@ function checkHotkeyModifier( modifiers: Modifier[], evt: KeyboardEvent | MouseE
 				if( !evt.altKey ) // This key value is also used for the Apple Option key. 
 					return false;
 				break;
-			case 'Mod': // Mod = Cmd on MacOS and Ctrl on other OS
-				if( isMacPlat ? !evt.metaKey : !evt.ctrlKey)
+			case 'Mod': // Mod = Cmd on MacOS(iOS?) and Ctrl on other OS
+				if( isAppleSys ? !evt.metaKey : !evt.ctrlKey)
 					return false;
 				break;
 		}
@@ -957,9 +957,9 @@ const MAINVIEW_HTML: string = `
   <div class="document-search">
     <input class="document-search-input" type="search" placeholder="${i18next.t("editor.search.placeholder-find")}" id="ohpSearchInput">
     <div class="document-search-buttons">
-      <button class="document-search-button" aria-label="${isMacPlat ? "⇧F3" : "Shift + F3"}" aria-label-position="top" id="ohpSearchPrev">${i18next.t("editor.search.label-previous")}</button>
+      <button class="document-search-button" aria-label="${isAppleSys ? "⇧F3" : "Shift + F3"}" aria-label-position="top" id="ohpSearchPrev">${i18next.t("editor.search.label-previous")}</button>
       <button class="document-search-button" aria-label="F3" aria-label-position="top" id="ohpSearchNext">${i18next.t("editor.search.label-next")}</button>
-      <button class="document-search-button" aria-label="${isMacPlat ? "⌥Enter" : "Alt + Enter"}" aria-label-position="top" id="ohpSearchSelectAll">${i18next.t("editor.search.label-all")}</button>
+      <button class="document-search-button" aria-label="${isAppleSys ? "⌥Enter" : "Alt + Enter"}" aria-label-position="top" id="ohpSearchSelectAll">${i18next.t("editor.search.label-all")}</button>
 	  <span class="document-search-close-button" aria-label="${i18next.t("editor.search.label-exit-search")}" aria-label-position="top" id="ohpSearchExit"></span>
     </div>
   </div>

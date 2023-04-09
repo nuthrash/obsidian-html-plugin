@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-html-plugin",
-	"version": "1.0.8",
+	"version": "1.0.9",
 	"description": "This is a HTML file reader plugin for Obsidian. Can open document with \".html\" and \".htm\" file extensions.",
 	"main": "main.js",
 	"scripts": {

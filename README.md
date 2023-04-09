@@ -99,7 +99,7 @@ This section would try to explain some terms used by Operating Mode more detail.
 <br />
 
 ### Hotkeys and touch gestures settings
-Almost all keyboard hotkeys are taken from Obsidian's global hotkey settings, so you shall modify them via Settings → Options → Hotkeys. <br>
+Almost all keyboard hotkeys are taken from Obsidian's global hotkey settings, so you shall modify them via ⚙"Settings" ⇨ "Hotkeys" options page. <br>
 That means this plugin does not design any new configuration interface for keyboard hotkeys. And it just show the first two settings of corresponding hotkeys with readonly mode.
 
 #### Search document text
@@ -111,11 +111,11 @@ Zoom out current file.
 #### Reset document zoom
 Reset current file zoom.
 #### Quick document zoom in and out
-Zoom the document using Ctrl + Wheel (zoom in: ↑, zoom out: ↓), or using the trackpad/touch screen/touch panel two-finger pinch-zoom gesture (zoom in: ← →, zoom out: → ←).
+Zoom the document using Ctrl + Wheel (zoom in: ↑, zoom out: ↓), or using the trackpad/touch screen/touch panel by two-finger pinch-zoom gesture (zoom in: ← →, zoom out: → ←).
 
 
 ## More options
-After opening HTML files, the three dots "more options" menu icon on right-upper corner of tab would add some menu items.
+After opening HTML files, the three dots ⋮ "more options" menu icon on right-upper corner of tab would be added some menu items.
 
 ![MoreOptions1.jpg](./assets/images/screenshots/MoreOptions1.jpg "More Options part1")
  
@@ -174,4 +174,4 @@ Reset current file zoom.
   - The mobile version of Obsidian does not provide these settings, so this plugin also not provide them.
   
 - The presentation style of search results is different with Markdown documents
-  - There are lots tags/elements inside HTML files, and some search results would across tags and overlap with each others. Therefore, this plugin use the block mark style (highlight with background color) instead outline style.
+  - There are lots tags/elements inside HTML files, and some search results would across tags and overlap with each others. Therefore, this plugin use the block mark style (highlight with background color) instead of outline style.

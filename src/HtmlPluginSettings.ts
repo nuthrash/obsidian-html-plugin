@@ -57,7 +57,7 @@ export class HtmlSettingTab extends PluginSettingTab {
 		
 		// ----- HotKeys and Touch Gestures Settings ----
 		containerEl.createEl('h2', { text: 'HotKeys and Touch Gestures Settings' });
-		containerEl.createEl('small', { text: `Almost all keyboard hotkeys are taken from Obsidian's global hotkey settings, so you shall modify them via Settings → Options → Hotkeys` });
+		containerEl.createEl('small', { text: `Almost all keyboard hotkeys are taken from Obsidian's global hotkey settings, so you shall modify them via ⚙"Settings" ⇨ "Hotkeys" options page.` });
 		
 		this.buildHotkeySettings();
 		
@@ -145,17 +145,14 @@ export class HtmlSettingTab extends PluginSettingTab {
 	}
 	
 	toNativeModifierString( modifiers: Modifier[], key: string ): string {
-		const isMacPlat = isMacPlatform();
-		let str = modifiers.join( isMacPlat ? '' : ' + ' );
-		if( isMacPlat ) {
-			str = str
+		if( isMacPlatform() || isIosPlatform() ) {
+			return modifiers.join('')
 					.replace( 'Mod', '⌘' ).replace( 'Meta', '⌘' )
 					.replace( 'Shift', '⇧' ).replace( 'Alt', '⌥' )
 					.replace( 'Ctrl', '^' ).concat( key );
 		} else {
-			str = str.replace( 'Mod', 'Ctrl' ).replace( 'Meta', 'Win' ).concat( ` + ${key}` );
+			return modifiers.join( ' + ' ).replace( 'Mod', 'Ctrl' ).replace( 'Meta', 'Win' ).concat( ` + ${key}` );
 		}
-		return str;
 	}
 }
 
@@ -164,6 +161,14 @@ export function isMacPlatform(): boolean {
 	const macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'];
 	if( macosPlatforms.indexOf(window.navigator.platform) !== -1 )
 		return true;
+	return false;
+}
+export function isIosPlatform(): boolean {
+	const iosPlatforms = ['iPhone', 'iPad', 'iPod'];
+	const userAgent = window.navigator.userAgent;
+	for( let plat of iosPlatforms )
+		if( userAgent.contains(plat) )
+			return true;
 	return false;
 }
 
