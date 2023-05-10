@@ -3,12 +3,16 @@ import HtmlPlugin from "./HtmlPlugin";
 import { HtmlPluginOpMode, OP_MODE_INFO_DATA, OP_MODE_INFO_HTML } from "./HtmlPluginOpMode";
 
 export interface HtmlPluginSettings {
+	bgColorEnabled: boolean;
+	bgColor: string; // Hex strings are 6-digit hash-prefixed rgb strings in lowercase form.
 	opMode: HtmlPluginOpMode;
 	zoomByWheelAndGesture: boolean;
 	zoomValue: number;
 }
 
 export const DEFAULT_SETTINGS: HtmlPluginSettings = {
+	bgColorEnabled: false,
+	bgColor: "#ffffff",
 	opMode: HtmlPluginOpMode.Balance,
 	zoomByWheelAndGesture: true,
 	zoomValue: 1.0,
@@ -32,9 +36,10 @@ export class HtmlSettingTab extends PluginSettingTab {
 		containerEl.createEl('pre', { text: '※ Remember to reload the file after changing any setting.'})
 						.setAttribute('style', 'color:red');
 			
-		// ----- General Settings ----
+		// ----- General Settings -----
 		containerEl.createEl('h2', { text: 'General Settings' });
 
+		// ----- General Settings: Operating Mode -----
 		const opModeSetting = new Setting(containerEl);
 		opModeSetting
 			.setName("Operating Mode")
@@ -55,7 +60,29 @@ export class HtmlSettingTab extends PluginSettingTab {
 		
 		opModeSetting.infoEl.appendChild( this.opModeInfoFrag.cloneNode(true) );
 		
-		// ----- HotKeys and Touch Gestures Settings ----
+		// ----- General Settings: Background Color -----
+		const bgColorSetting = new Setting(containerEl);
+		bgColorSetting
+			.setName("Background Color")
+			.setDesc("Set HTML <body> element background color forcely.")
+			.addColorPicker((picker) => {
+				picker
+					.setValue(this.plugin.settings.bgColor)
+					.onChange( async (newColor: string) => {
+						this.plugin.settings.bgColor = newColor;
+						await this.plugin.saveSettings();
+					});
+			})
+			.addToggle( (toggle) => {
+				toggle
+					.setValue(this.plugin.settings.bgColorEnabled)
+					.onChange( async (enabled: boolean) => {
+						this.plugin.settings.bgColorEnabled = enabled;
+						await this.plugin.saveSettings();
+					});
+			});
+		
+		// ----- HotKeys and Touch Gestures Settings -----
 		containerEl.createEl('h2', { text: 'HotKeys and Touch Gestures Settings' });
 		containerEl.createEl('small', { text: `Almost all keyboard hotkeys are taken from Obsidian's global hotkey settings, so you shall modify them via ⚙"Settings" ⇨ "Hotkeys" options page.` });
 		
@@ -67,7 +94,7 @@ export class HtmlSettingTab extends PluginSettingTab {
 			.addToggle( (toggle) => {
 				toggle
 					.setValue(this.plugin.settings.zoomByWheelAndGesture)
-					.onChange( async (enabled) => {
+					.onChange( async (enabled: boolean) => {
 						this.plugin.settings.zoomByWheelAndGesture = enabled;
 						await this.plugin.saveSettings();
 					});

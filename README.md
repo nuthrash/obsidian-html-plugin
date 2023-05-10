@@ -46,7 +46,7 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 
 Set Operating Mode for this plugin to protect user and app.
 
-#### Comparsion
+##### Comparsion
 
 |                          | Images | Styles  | Scripting             | DSD<sup>*</sup>  | CSP<sup>#</sup> | HTML Sanitization | Isolated |
 |         ---:             | :---:  | :---:   | :---:                 | :---:            | :---: | :---: | :---: |
@@ -63,7 +63,7 @@ Set Operating Mode for this plugin to protect user and app.
 [3]: The external script files may not executable due to Obsidian's limitation. <br />
 
 <details>
-<summary><h4>Detail Explanation</h4></summary>
+<summary><h5>Detail Explanation</h5></summary>
 
 1. **Text Mode** - Highly recommended for the files came from untrusted source! This mode almost sanitized all visual effects, script codes, and styles out. eanwhile, it keeps text parts for reading the content of HTML files with HTML layout elements.
 2. **High Restricted Mode** - This mode recommended for the user who wants more security. It would keep custom elements but sanitize unsafe HTML elements out, as well as unsafe attributes and their contents. The external image sources would be blocked by CSP, and the images are only available from the HTML files themselves.
@@ -82,7 +82,7 @@ Set Operating Mode for this plugin to protect user and app.
 
 </details>
 <details>
-<summary><h4>Terms Explanation</h4></summary>
+<summary><h5>Terms Explanation</h5></summary>
 	
 This section would try to explain some terms used by Operating Mode more detail. You can ignore some terms without bold font face (they are technical terms).
 
@@ -98,6 +98,10 @@ This section would try to explain some terms used by Operating Mode more detail.
 
 <br />
 
+#### Background Color
+Set HTML &lt;body&gt; element background color forcely.
+
+
 ### Hotkeys and touch gestures settings
 Almost all keyboard hotkeys are taken from Obsidian's global hotkey settings, so you shall modify them via ⚙"Settings" ⇨ "Hotkeys" options page. <br>
 That means this plugin does not design any new configuration interface for keyboard hotkeys. And it just show the first two settings of corresponding hotkeys with readonly mode.
@@ -111,7 +115,7 @@ Zoom out current file.
 #### Reset document zoom
 Reset current file zoom.
 #### Quick document zoom in and out
-Zoom the document using Ctrl + Wheel (zoom in: ↑, zoom out: ↓), or using the trackpad/touch screen/touch panel by two-finger pinch-zoom gesture (zoom in: ← →, zoom out: → ←).
+Zoom the document using Ctrl + Wheel (zoom in: ↑, zoom out: ↓), or using the trackpad/touch screen/touch panel two-finger pinch-zoom gesture (zoom in: ← →, zoom out: → ←).
 
 
 ## More options

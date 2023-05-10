@@ -371,6 +371,11 @@ async function modifyAnchorTarget( doc: HTMLDocument ): Promise<void> {
 async function restoreStateBySettings( doc: HTMLDocument, settings: HtmlPluginSettings ): Promise<void> {
 	doc.body.style.transformOrigin = "left top"; // CSS transform-origin
 	doc.body.style.transform = `scale(${settings.zoomValue})`;
+	
+	if( settings.bgColorEnabled ) {
+		doc.body.setAttribute( "bgColor", settings.bgColor );
+		doc.body.style.backgroundColor = settings.bgColor;
+	}
 }
 
 function isUnselectableElement( elm: HTMLElement ): boolean {
@@ -435,7 +440,7 @@ function checkHotkeyModifier( modifiers: Modifier[], evt: KeyboardEvent | MouseE
 				if( !evt.altKey ) // This key value is also used for the Apple Option key. 
 					return false;
 				break;
-			case 'Mod': // Mod = Cmd on MacOS(iOS?) and Ctrl on other OS
+			case 'Mod': // Mod = Cmd on MacOS/iOS/iPadOS and Ctrl on other OS
 				if( isAppleSys ? !evt.metaKey : !evt.ctrlKey)
 					return false;
 				break;
@@ -756,7 +761,7 @@ async function buildUserInteractiveFacilities( mainView: HTMLElement ): Promise<
 		clearAllMarks( false );
 		hltAllNodes = preAllNodes;
 		
-		searchBar.style.display = 'none'; // hide Search box
+		searchBar.style.display = 'none'; // hide Search bar
 		isSearchBarVisible = false;
 		iframe.contentWindow.focus();
 	} );
