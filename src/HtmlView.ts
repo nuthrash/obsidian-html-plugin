@@ -114,6 +114,11 @@ export class HtmlView extends FileView {
 				
 				await restoreStateBySettings( iframe.contentWindow.document, iframe.mainView.settings );
 				buildUserInteractiveFacilities( iframe.mainView );
+				
+				// bubble iframe's 'keydown' event to parent (issue #16)
+				iframe.contentWindow.addEventListener( 'keydown', (evt) => {
+					iframe.dispatchEvent( new evt.constructor(evt.type, evt) );
+				}, false );
 			};
 			
 			dispatchEvent(new CustomEvent("DOMContentLoaded"));
