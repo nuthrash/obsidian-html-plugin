@@ -101,6 +101,8 @@ This section would try to explain some terms used by Operating Mode more detail.
 #### Background Color
 Set HTML &lt;body&gt; element background color forcely.
 
+#### Extra File Extensions
+Open HTML format files with user defined file extensions (list of comma separated strings). Change this setting may cause other plugins un-workable, so you shall know very clearly what you are doing. Remember to relaunch the Obsidian app after change this setting!
 
 ### Hotkeys and touch gestures settings
 Almost all keyboard hotkeys are taken from Obsidian's global hotkey settings, so you shall modify them via ⚙"Settings" ⇨ "Hotkeys" options page. <br>

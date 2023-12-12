@@ -374,8 +374,9 @@ async function modifyAnchorTarget( doc: HTMLDocument ): Promise<void> {
 }
 
 async function restoreStateBySettings( doc: HTMLDocument, settings: HtmlPluginSettings ): Promise<void> {
-	doc.body.style.transformOrigin = "left top"; // CSS transform-origin
-	doc.body.style.transform = `scale(${settings.zoomValue})`;
+	// all[0] ==> <html>
+	doc.all[0].style.transformOrigin = "left top"; // CSS transform-origin
+	doc.all[0].style.transform = `scale(${settings.zoomValue})`;
 	
 	if( settings.bgColorEnabled ) {
 		doc.body.setAttribute( "bgColor", settings.bgColor );
@@ -707,7 +708,7 @@ async function buildUserInteractiveFacilities( mainView: HTMLElement ): Promise<
 	};
 	mainView.ZoomIn = () => {
 		settings.zoomValue = NP.plus( settings.zoomValue, 0.1 );
-		iframeDoc.body.style.transform = `scale(${settings.zoomValue})`;
+		iframeDoc.all[0].style.transform = `scale(${settings.zoomValue})`;
 		iframe.contentWindow.focus();
 	};
 	mainView.ZoomOut = () => {
@@ -715,12 +716,12 @@ async function buildUserInteractiveFacilities( mainView: HTMLElement ): Promise<
 		if( scaleValue <= 0.1 )
 			scaleValue = 0.1;
 		settings.zoomValue = scaleValue;
-		iframeDoc.body.style.transform = `scale(${settings.zoomValue})`;
+		iframeDoc.all[0].style.transform = `scale(${settings.zoomValue})`;
 		iframe.contentWindow.focus();
 	};
 	mainView.ResetZoom = () => {
 		settings.zoomValue = 1.0;
-		iframeDoc.body.style.transform = `scale(${settings.zoomValue})`;
+		iframeDoc.all[0].style.transform = `scale(${settings.zoomValue})`;
 		iframe.contentWindow.focus();
 	};
 	

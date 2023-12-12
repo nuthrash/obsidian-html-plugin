@@ -8,6 +8,7 @@ export interface HtmlPluginSettings {
 	opMode: HtmlPluginOpMode;
 	zoomByWheelAndGesture: boolean;
 	zoomValue: number;
+	extraFileExt: string;
 }
 
 export const DEFAULT_SETTINGS: HtmlPluginSettings = {
@@ -16,6 +17,7 @@ export const DEFAULT_SETTINGS: HtmlPluginSettings = {
 	opMode: HtmlPluginOpMode.Balance,
 	zoomByWheelAndGesture: true,
 	zoomValue: 1.0,
+	extraFileExt: '',
 }
 
 export class HtmlSettingTab extends PluginSettingTab {
@@ -81,6 +83,21 @@ export class HtmlSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+		
+		// ----- General Settings: Extra File Extensions -----
+		const extraFileExtSetting = new Setting(containerEl);
+		extraFileExtSetting
+			.setName("Extra File Extensions")
+			.setDesc("Open HTML format files with user defined file extensions (list of comma separated strings). Change this setting may cause other plugins un-workable, so you shall know very clearly what you are doing. Remember to relaunch the Obsidian app after change this setting!")
+			.addText((val) =>
+				val
+					.setValue(this.plugin.settings.extraFileExt)
+					.setPlaceholder("e.g. xhtml, htm123")
+					.onChange( async (value: string) => {
+						this.plugin.settings.extraFileExt = value;
+						await this.plugin.saveSettings();
+					})
+      );
 		
 		// ----- HotKeys and Touch Gestures Settings -----
 		containerEl.createEl('h2', { text: 'HotKeys and Touch Gestures Settings' });

@@ -18,7 +18,17 @@ export default class HtmlPlugin extends Plugin {
 		});
 
 		try {
-			this.registerExtensions(HTML_FILE_EXTENSIONS, VIEW_TYPE_HTML);
+			if( this.settings.extraFileExt === '' ) {
+				this.registerExtensions(HTML_FILE_EXTENSIONS, VIEW_TYPE_HTML);
+			} else {
+				let efe = this.settings.extraFileExt.split(",").map(s => s.trim()).filter(s => s.length > 0); // Array<string>
+				if( efe && efe.length > 0 ) {
+					for( let i = 0; i < efe.length; ++i )
+						HTML_FILE_EXTENSIONS.push( efe[i] );
+				}
+				
+				this.registerExtensions(HTML_FILE_EXTENSIONS, VIEW_TYPE_HTML);
+			}
 		} catch (error) {
 			await showError(`File extensions ${HTML_FILE_EXTENSIONS} had been registered by other plugin!`);
 		}
