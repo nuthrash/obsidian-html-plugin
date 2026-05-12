@@ -137,11 +137,18 @@ export class HtmlSettingTab extends PluginSettingTab {
 	
 	buildHotkeySettings(): void {
 		const { containerEl } = this;
+		const appAny = this.app as App & { hotkeyManager?: any; isMobile?: boolean };
+		const getHotkeysSafe = (commandId: string): any[] => {
+			const manager = appAny.hotkeyManager;
+			if (!manager)
+				return [];
+			return manager.getHotkeys?.(commandId) || manager.getDefaultHotkeys?.(commandId) || [];
+		};
 		
 		// default hotkeys: app.commands.commands app.hotkeyManager.defaultKeys
 		// custom hotkeys: app.hotkeyManager.customKeys
 		
-		let gSearch = this.app.hotkeyManager.getHotkeys('editor:open-search') || this.app.hotkeyManager.getDefaultHotkeys('editor:open-search');
+		let gSearch = getHotkeysSafe('editor:open-search');
 		const hkSearch = new Setting(containerEl);
 		hkSearch
 			.setName( "Search document text" )
@@ -152,22 +159,22 @@ export class HtmlSettingTab extends PluginSettingTab {
 			{ elm: hkSearch, settings: gSearch } 
 		];
 			
-		if( !this.app.isMobile ) {
+		if( !appAny.isMobile ) {
 			// following Hotkey settings would not appear on Mobile platforms!!
 			
-			let gZoomIn = this.app.hotkeyManager.getHotkeys('window:zoom-in') || this.app.hotkeyManager.getDefaultHotkeys('window:zoom-in');
+			let gZoomIn = getHotkeysSafe('window:zoom-in');
 			const hkZoomIn = new Setting(containerEl)
 								.setName( "Zoom in document" )
 								.setDesc( `Zoom in current file.` );
 			hotkeyPairs.push( { elm: hkZoomIn, settings: gZoomIn } );
 			
-			let gZoomOut = this.app.hotkeyManager.getHotkeys('window:zoom-out') || this.app.hotkeyManager.getDefaultHotkeys('window:zoom-out');
+			let gZoomOut = getHotkeysSafe('window:zoom-out');
 			const hkZoomOut = new Setting(containerEl)
 								.setName( "Zoom out document" )
 								.setDesc( `Zoom out current file.` );
 			hotkeyPairs.push( { elm: hkZoomOut, settings: gZoomOut } );
 								
-			let gZoomReset = this.app.hotkeyManager.getHotkeys('window:reset-zoom') || this.app.hotkeyManager.getDefaultHotkeys('window:reset-zoom');
+			let gZoomReset = getHotkeysSafe('window:reset-zoom');
 			const hkZoomReset = new Setting(containerEl)
 								.setName( "Reset document zoom" )
 								.setDesc( `Reset current file zoom.` );

@@ -65,11 +65,13 @@ export class HtmlView extends FileView {
 			this.mainView.innerHTML = MAINVIEW_HTML; // direct assign safe HTML code
 			const searchBar = this.mainView.querySelector( "#ohpMainView" );
 			const iframe = this.mainView.querySelector( "#ohpIframe" );
+			const baseHref = getHtmlBaseHref(this.app, file);
 			
 			let dom = null, applyAnchorFix = true;
 			switch( this.settings.opMode ) {
 				case HtmlPluginOpMode.Balance:
 					dom = (new window.DOMParser()).parseFromString( htmlStr, 'text/html' );
+					ensureBaseHref(dom, baseHref);
 					await removeScriptTagsAndExtScripts( dom );
 					await sanitizeAndApplyPatches( dom );
 					await restoreStateBySettings( dom, this.settings );
@@ -80,26 +82,27 @@ export class HtmlView extends FileView {
 				
 				case HtmlPluginOpMode.LowRestricted:
 					dom = (new window.DOMParser()).parseFromString( htmlStr, 'text/html' );
+					ensureBaseHref(dom, baseHref);
 					await removeScriptTagsAndExtScripts( dom );
 					await restoreStateBySettings( dom, this.settings );
 					iframe.srcdoc = dom.documentElement.outerHTML;
 					break;
 				
 				case HtmlPluginOpMode.Unrestricted:
-					iframe.srcdoc = htmlStr;
+					iframe.srcdoc = injectBaseHrefToHtml(htmlStr, baseHref);
 					break;
 				
 				case HtmlPluginOpMode.HighRestricted:
 					const purifier = new window.DOMPurify();
 					purifier.addHook( 'afterSanitizeAttributes' , ohpAfterSanitizeAttributes ); // disable some elements to avoid XSS attacks
-					const cleanHtmlHR = purifier.sanitize( htmlStr, hrModeConfig );
+					const cleanHtmlHR = purifier.sanitize( injectBaseHrefToHtml(htmlStr, baseHref), hrModeConfig );
 					// iframe.sandbox = "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-top-navigation-by-user-activation";
 					iframe.csp = "default-src 'none'; script-src 'none'; object-src 'none'; frame-src https: http: mediastream: blob:; font-src 'self' data:; img-src 'self' data:; style-src 'unsafe-inline'; media-src 'self' data:; "; 
 					iframe.srcdoc = cleanHtmlHR;
 					break;
 									
 				case HtmlPluginOpMode.Text:
-					const cleanHtmlText = (new window.DOMPurify()).sanitize( htmlStr, textModeConfig );
+					const cleanHtmlText = (new window.DOMPurify()).sanitize( injectBaseHrefToHtml(htmlStr, baseHref), textModeConfig );
 					iframe.sandbox = "allow-same-origin";
 					iframe.csp = "default-src 'none'; script-src 'none'; object-src 'none'; frame-src 'none'; font-src 'self' data:; img-src 'none'; style-src 'unsafe-inline'; media-src 'none'; ";
 					iframe.srcdoc = cleanHtmlText;
@@ -191,6 +194,36 @@ export class HtmlView extends FileView {
 	getIcon() {
 		// built-in icons list: https://forum.obsidian.md/t/list-of-available-icons-for-component-seticon/16332
 		return "code-glyph";  // </>
+	}
+}
+
+function getHtmlBaseHref(app: App, file: TFile): string {
+	try {
+		const resourcePath = app?.vault?.getResourcePath(file);
+		return resourcePath || "";
+	} catch {
+		return "";
+	}
+}
+
+function ensureBaseHref(doc: Document, baseHref: string): void {
+	if (!doc?.head || !baseHref) return;
+	let baseElm = doc.querySelector("base");
+	if (!baseElm) {
+		baseElm = doc.createElement("base");
+		doc.head.prepend(baseElm);
+	}
+	baseElm.setAttribute("href", baseHref);
+}
+
+function injectBaseHrefToHtml(htmlStr: string, baseHref: string): string {
+	if (!htmlStr || !baseHref) return htmlStr;
+	try {
+		const doc = (new window.DOMParser()).parseFromString(htmlStr, "text/html");
+		ensureBaseHref(doc, baseHref);
+		return doc.documentElement.outerHTML;
+	} catch {
+		return htmlStr;
 	}
 }
 
@@ -409,7 +442,9 @@ function isUnselectableElement( elm: HTMLElement ): boolean {
 
 let isAppleSys = isMacPlatform() || isIosPlatform();
 function mapNativeHotkeys( app: App, cmdId: string ): Hotkey[] {
-	let ohks = app.hotkeyManager.getHotkeys(cmdId) || app.hotkeyManager.getDefaultHotkeys(cmdId);
+	const appAny = app as App & { hotkeyManager?: any };
+	const manager = appAny.hotkeyManager;
+	let ohks = manager?.getHotkeys?.(cmdId) || manager?.getDefaultHotkeys?.(cmdId);
 
 	const nhks: Hotkey[] = [];
 	if( !ohks || ohks.length <= 0 )
