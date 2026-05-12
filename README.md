@@ -38,7 +38,7 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 1. Head to ⚙"Settings" ⇨ "Community plugins" options page, find the settings icon ⚙ of "**HTML Reader**" item, then click it.
 2. Or, Head to ⚙"Settings" ⇨ click "**HTML Reader**" item on the bottom of left panel under the "Community plugins" group after enabled it.
 
-![HtmlReadedSettings1.jpg](./assets/images/screenshots/HtmlReadedSettings1.jpg "HTML Reader Setting part1") 
+![HtmlReaderSettings1.jpg](./assets/images/screenshots/HtmlReaderSettings1.jpg "HTML Reader Setting part1") 
 
 ### General Settings
 
