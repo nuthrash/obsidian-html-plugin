@@ -347,16 +347,25 @@ async function sanitizeAndApplyPatches( doc: HTMLDocument ): Promise<void> {
 
 function applyUserInteractivePatches( doc: HTMLDocument ) {
 	if( !doc.body.style ) {
-		doc.body.setAttribute( 'style', "overflow: auto; user-select: text;" );
+		doc.body.setAttribute( 'style', "overflow-x: hidden; overflow-y: auto; user-select: text; max-width: 100%; word-wrap: break-word;" );
 		return;
 	}
 	
 	// avoid some HTML files unable to scroll, only when 'overflow' is not set
-	if( doc.body.style.overflow === '' )
-		doc.body.style.overflow = 'auto';
+	if( doc.body.style.overflow === '' ) {
+		doc.body.style.overflowX = 'hidden';
+		doc.body.style.overflowY = 'auto';
+	}
+	// avoid horizontal overflow on any element
+	if( doc.body.style.maxWidth === '' )
+		doc.body.style.maxWidth = '100%';
 	// avoid some HTML files unable to select text, only when 'user-select' is not set
 	if( doc.body.style.userSelect === '' )
 		doc.body.style.userSelect = 'text';
+	
+	// also constrain html root element
+	if( doc.documentElement.style.overflowX === '' )
+		doc.documentElement.style.overflowX = 'hidden';
 }
 
 async function removeScriptTagsAndExtScripts( doc: HTMLDocument ): Promise<void> {
@@ -1038,7 +1047,7 @@ const MAINVIEW_HTML: string = `
   </div>
 </div>
 
-<iframe style="border: none; flex-grow: 1; width: 100%; overflow: hidden;" loading="eager" margin="0" padding="0"  width="100%" height="100%" id="ohpIframe">
+<iframe style="border: none; flex-grow: 1; width: 100%; overflow-x: hidden; overflow-y: auto;" loading="eager" margin="0" padding="0"  width="100%" height="100%" id="ohpIframe">
 </iframe>
 `;
 

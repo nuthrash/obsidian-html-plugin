@@ -38,7 +38,7 @@ export class HtmlSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl('h1', { text: 'HTML Reader Settings' });
 		containerEl.createEl('pre', { text: '※ Remember to reload the file after changing any setting.'})
-						.setAttribute('style', 'color:red');
+						.setAttribute('style', 'color:red; white-space: pre-wrap; word-break: break-word;');
 			
 		// ----- General Settings -----
 		containerEl.createEl('h2', { text: 'General Settings' });

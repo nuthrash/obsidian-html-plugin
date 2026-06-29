@@ -50,6 +50,7 @@ export const OP_MODE_INFO_HTML: string = `
 
 <details>
 <summary>Comparison</summary>
+<div style="overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch;">
 <table id="ophCompTable">
   <thead>
   <tr>
@@ -116,6 +117,7 @@ export const OP_MODE_INFO_HTML: string = `
   </tr>
   <tbody>
 </table>
+</div>
 
 <div><b>*</b>: <a href="https://web.dev/declarative-shadow-dom/">Declarative Shadow DOM</a></div>
 <div><b>#</b>: <a href="https://en.wikipedia.org/wiki/Content_Security_Policy">Content Security Policy</a></div>
