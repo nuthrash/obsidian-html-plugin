@@ -3,6 +3,7 @@
 This is a plugin for Obsidian (https://obsidian.md). Can open document with `.html`  and `.htm` file extensions.
 
 - [How to use](#how-to-use)
+- [Form State Persistence](#form-state-persistence)
 - [Install this plugin from Obsidian](#install-this-plugin-from-obsidian)
 - [Manually installing the plugin](#manually-installing-the-plugin)
 - [HTML Reader Settings](#html-reader-settings)
@@ -17,6 +18,31 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 1. Put .html or .htm files to any obsidian-html-plugin installed vault folder
 2. Click any HTML or HTM item to open it
 3. Reading
+
+## Form State Persistence
+
+Interactive HTML files (dashboards, calculators, forms) normally reset to their default values every time they are reopened. With this feature, the plugin remembers what the user changed:
+
+1. Move a slider, type a value, tick a checkbox, pick a select option…
+2. About 1 second after the last change, the plugin writes the current state of all form controls into the HTML file itself, as a single inert JSON block placed right before `</body>`:
+
+   ```html
+   <script type="application/json" id="ohp-form-state">{"#mySlider":{"v":"75"}, ...}</script>
+   ```
+
+3. The next time the file is opened, the saved values are restored and synthetic `input`/`change` events are dispatched, so the page's own scripts (charts, computed outputs) react as if the user had entered the values manually.
+
+Because the state lives inside the file, it travels with it — vault sync (iCloud, Obsidian Sync, git…) carries the state to other devices. The rest of the file is never touched: only the JSON block is inserted or replaced.
+
+Details and limitations:
+
+- Persisted controls: `<input>` (including `range`, `number`, `checkbox`, `radio`, `date`, …), `<textarea>`, `<select>` (including multiple). Controls are identified by their `id`, or by document position when they have no `id`.
+- **Never** persisted: `type="password"`, `type="file"`, and `type="hidden"` inputs.
+- Works only for plain-text `.html`/`.htm` files — not for SingleFileZ or MHTML files.
+- Works in every Operating Mode except **High Restricted** and **Text** (those modes disable form controls anyway). Note that in the default **Balance** mode text inputs are read-only by design, but sliders, checkboxes, radios and selects still work and are persisted.
+- Pending changes are flushed when the file view is closed.
+- Nothing is written when nothing changed (no redundant file writes, no sync churn).
+- The feature can be turned off with the **"Save Form State into HTML File"** toggle in the plugin settings (enabled by default).
 
 ## Install this plugin from Obsidian
 

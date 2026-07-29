@@ -38,7 +38,8 @@ export class HtmlView extends FileView {
 			// Obsidian's HTMLElement and Node API: https://github.com/obsidianmd/obsidian-api/blob/master/obsidian.d.ts
 			
 			let htmlStr = null;
-			
+			let isPlainHtml = false; // plain text .html/.htm file, eligible for form state persistence
+
 			if( this.settings.mhtmlSupport && (MHTML_FILE_EXTENSIONS.indexOf(file.extension) >= 0) ) {
 				// Support MHTML, Feature request #19
 				const { data, title, favicons } = await convert(new Uint8Array(contents));
@@ -48,12 +49,13 @@ export class HtmlView extends FileView {
 					// the HTML file made by SingleFileZ
 					globalThis.zip = zip;
 					const { docContent } = await extract(new Blob([new Uint8Array(contents)]), { noBlobURL: true });
-					
+
 					htmlStr = docContent;
 				} catch {
-					// the HTML file not made by SingleFileZ			
+					// the HTML file not made by SingleFileZ
 					const decoder = new TextDecoder();
 					htmlStr = decoder.decode(contents); // decode with UTF8
+					isPlainHtml = true;
 				}
 			}
 			
@@ -115,6 +117,10 @@ export class HtmlView extends FileView {
 			this.mainView.settings = this.settings;
 			this.mainView.searchBar = searchBar;
 			this.mainView.iframe = iframe;
+			this.mainView.file = file;
+			this.mainView.formStateEligible = isPlainHtml && this.settings.saveFormState
+				&& this.settings.opMode !== HtmlPluginOpMode.HighRestricted
+				&& this.settings.opMode !== HtmlPluginOpMode.Text;
 			iframe.onload = async function() {
 				if( applyAnchorFix ) {
 					// fix some behaviors for consistency with Shadow DOM and Obsidian
@@ -122,10 +128,13 @@ export class HtmlView extends FileView {
 					await modifyAnchorTarget( iframe.contentDocument );
 					iframe.contentWindow.addEventListener( 'click', sdFixAnchorClickHandler );
 				}
-				
+
 				await restoreStateBySettings( iframe.contentWindow.document, iframe.mainView.settings );
 				buildUserInteractiveFacilities( iframe.mainView );
-				
+
+				if( iframe.mainView.formStateEligible )
+					await setupFormStatePersistence( iframe.mainView );
+
 				// bubble iframe's 'keydown' event to parent (issue #16)
 				iframe.contentWindow.addEventListener( 'keydown', (evt) => {
 					iframe.dispatchEvent( new evt.constructor(evt.type, evt) );
@@ -140,6 +149,17 @@ export class HtmlView extends FileView {
 	}
 
 	onunload(): void {
+	}
+
+	async onUnloadFile(file: TFile): Promise<void> {
+		// write out pending form state before the file view goes away
+		const mv = this.mainView as any;
+		if( mv && mv.flushFormState ) {
+			try {
+				await mv.flushFormState();
+			} catch {}
+		}
+		return super.onUnloadFile(file);
 	}
 	
 	onPaneMenu(menu: Menu, source: 'more-options' | 'tab-header' | string): void {
@@ -371,6 +391,9 @@ function applyUserInteractivePatches( doc: HTMLDocument ) {
 async function removeScriptTagsAndExtScripts( doc: HTMLDocument ): Promise<void> {
 	let allNodes = doc.querySelectorAll( 'script' );
 	for( var node of allNodes ) {
+		// keep the inert JSON form state block (it is not executable)
+		if( node.id === OHP_STATE_ID && node.getAttribute('type') === 'application/json' )
+			continue;
 		node.parentNode.removeChild( node );
 	}
 	
@@ -442,6 +465,157 @@ async function restoreStateBySettings( doc: HTMLDocument, settings: HtmlPluginSe
 		doc.body.setAttribute( "bgColor", settings.bgColor );
 		doc.body.style.backgroundColor = settings.bgColor;
 	}
+}
+
+// ----- Form state persistence (fork feature) -----
+// Stores current values of form elements as an inert JSON <script> block inside
+// the HTML file itself, and restores + re-dispatches events on next open.
+
+const OHP_STATE_ID = "ohp-form-state";
+const OHP_STATE_RE = /<script type="application\/json" id="ohp-form-state">[\s\S]*?<\/script>/i;
+
+function ohpFormStateKey( elm: any, idx: number ): string {
+	return elm.id ? `#${elm.id}` : `@${idx}`;
+}
+
+function collectFormState( doc: any ): Record<string, any> {
+	const state: Record<string, any> = {};
+	const elms = doc.querySelectorAll( 'input, textarea, select' );
+	for( let idx = 0; idx < elms.length; ++idx ) {
+		const elm = elms[idx];
+		const key = ohpFormStateKey( elm, idx );
+		// NOTE: cross-realm elements (iframe) - use tagName instead of instanceof
+		switch( elm.tagName ) {
+			case 'INPUT': {
+				const type = (elm.getAttribute('type') || 'text').toLowerCase();
+				// never persist passwords/files; hidden inputs are script-managed
+				if( type === 'password' || type === 'file' || type === 'hidden' )
+					break;
+				if( type === 'checkbox' || type === 'radio' )
+					state[key] = { c: !!elm.checked };
+				else
+					state[key] = { v: elm.value };
+				break;
+			}
+			case 'TEXTAREA':
+				state[key] = { v: elm.value };
+				break;
+			case 'SELECT':
+				if( elm.multiple )
+					state[key] = { m: Array.prototype.map.call(elm.selectedOptions, (o: any) => o.value) };
+				else
+					state[key] = { v: elm.value };
+				break;
+		}
+	}
+	return state;
+}
+
+function restoreFormState( doc: any, state: Record<string, any> ): void {
+	if( !state )
+		return;
+
+	const win = doc.defaultView;
+	const elms = doc.querySelectorAll( 'input, textarea, select' );
+	for( let idx = 0; idx < elms.length; ++idx ) {
+		const elm = elms[idx];
+		const entry = state[ ohpFormStateKey(elm, idx) ];
+		if( !entry )
+			continue;
+
+		let changed = false;
+		if( ('c' in entry) && elm.tagName === 'INPUT' ) {
+			if( elm.checked !== entry.c ) {
+				elm.checked = entry.c;
+				changed = true;
+			}
+		} else if( ('m' in entry) && elm.tagName === 'SELECT' ) {
+			for( const opt of elm.options ) {
+				const sel = entry.m.indexOf( opt.value ) >= 0;
+				if( opt.selected !== sel ) {
+					opt.selected = sel;
+					changed = true;
+				}
+			}
+		} else if( 'v' in entry ) {
+			if( elm.value !== entry.v ) {
+				elm.value = entry.v;
+				changed = true;
+			}
+		}
+
+		if( changed ) {
+			// let the page's own scripts react to the restored values
+			elm.dispatchEvent( new win.Event('input', { bubbles: true }) );
+			elm.dispatchEvent( new win.Event('change', { bubbles: true }) );
+		}
+	}
+}
+
+async function setupFormStatePersistence( mainView: any ): Promise<void> {
+	const iframe = mainView.iframe;
+	const doc = iframe.contentDocument || iframe.contentWindow?.document;
+	const app = mainView.app;
+	const file = mainView.file;
+	if( !doc || !app || !file )
+		return;
+
+	// restore previously saved state; the JSON block is part of the HTML file,
+	// so it is already present in the iframe's DOM
+	const stateElm = doc.getElementById( OHP_STATE_ID );
+	if( stateElm ) {
+		// give the page's scripts a moment to finish initialization
+		await new Promise( (resolve) => setTimeout(resolve, 150) );
+		try {
+			restoreFormState( doc, JSON.parse(stateElm.textContent) );
+		} catch (e) {
+			console.warn( 'HTML Reader: could not restore form state', e );
+		}
+	}
+
+	let saveTimer = 0;
+	let lastSavedJson: string | null = null;
+	const saveNow = async () => {
+		saveTimer = 0;
+		try {
+			const json = JSON.stringify( collectFormState(doc) ).replace( /</g, '\\u003c' );
+			if( json === lastSavedJson )
+				return;
+
+			const block = `<script type="application/json" id="${OHP_STATE_ID}">${json}</script>`;
+			const text = await app.vault.read( file );
+			let newText: string;
+			if( OHP_STATE_RE.test(text) )
+				newText = text.replace( OHP_STATE_RE, () => block );
+			else if( /<\/body>/i.test(text) )
+				newText = text.replace( /<\/body>/i, () => `${block}\n</body>` );
+			else
+				newText = `${text}\n${block}`;
+
+			if( newText !== text )
+				await app.vault.modify( file, newText );
+			lastSavedJson = json;
+		} catch (e) {
+			console.warn( 'HTML Reader: could not save form state', e );
+		}
+	};
+	const schedule = () => {
+		if( saveTimer )
+			window.clearTimeout( saveTimer );
+		saveTimer = window.setTimeout( saveNow, 1000 );
+	};
+
+	// listeners are attached after restore, so restoring does not re-trigger a save
+	doc.addEventListener( 'input', schedule, true );
+	doc.addEventListener( 'change', schedule, true );
+
+	mainView.flushFormState = async () => {
+		if( saveTimer ) {
+			window.clearTimeout( saveTimer );
+			saveTimer = 0;
+			await saveNow();
+		}
+	};
 }
 
 function isUnselectableElement( elm: HTMLElement ): boolean {
