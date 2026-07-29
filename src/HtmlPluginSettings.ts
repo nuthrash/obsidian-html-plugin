@@ -10,6 +10,7 @@ export interface HtmlPluginSettings {
 	zoomValue: number;
 	extraFileExt: string;
 	mhtmlSupport: boolean; // Support MHTML, Feature request #19
+	saveFormState: boolean; // Persist form input values into the HTML file
 }
 
 export const DEFAULT_SETTINGS: HtmlPluginSettings = {
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS: HtmlPluginSettings = {
 	zoomValue: 1.0,
 	extraFileExt: '',
 	mhtmlSupport: false, // Support MHTML, Feature request #19
+	saveFormState: true, // Persist form input values into the HTML file
 }
 
 export class HtmlSettingTab extends PluginSettingTab {
@@ -111,6 +113,20 @@ export class HtmlSettingTab extends PluginSettingTab {
 					.setValue( this.plugin.settings.mhtmlSupport )
 					.onChange( async (enabled: boolean) => {
 						this.plugin.settings.mhtmlSupport = enabled;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// ----- General Settings: Save Form State -----
+		const saveFormStateSetting = new Setting(containerEl);
+		saveFormStateSetting
+			.setName("Save Form State into HTML File")
+			.setDesc("Persist values of inputs, sliders, checkboxes, textareas and selects into the HTML file itself (as a small JSON block before </body>), and restore them next time the file is opened. Works in all Operating Modes except High Restricted and Text. Only applies to plain .html/.htm files (not SingleFileZ or MHTML).")
+			.addToggle( (toggle) => {
+				toggle
+					.setValue( this.plugin.settings.saveFormState )
+					.onChange( async (enabled: boolean) => {
+						this.plugin.settings.saveFormState = enabled;
 						await this.plugin.saveSettings();
 					});
 			});
