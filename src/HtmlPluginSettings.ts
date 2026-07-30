@@ -11,6 +11,7 @@ export interface HtmlPluginSettings {
 	extraFileExt: string;
 	mhtmlSupport: boolean; // Support MHTML, Feature request #19
 	saveFormState: boolean; // Persist form input values into the HTML file
+	autoReloadOnChange: boolean; // Reload the view when the file changes on disk
 }
 
 export const DEFAULT_SETTINGS: HtmlPluginSettings = {
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: HtmlPluginSettings = {
 	extraFileExt: '',
 	mhtmlSupport: false, // Support MHTML, Feature request #19
 	saveFormState: true, // Persist form input values into the HTML file
+	autoReloadOnChange: true, // Reload the view when the file changes on disk
 }
 
 export class HtmlSettingTab extends PluginSettingTab {
@@ -127,6 +129,20 @@ export class HtmlSettingTab extends PluginSettingTab {
 					.setValue( this.plugin.settings.saveFormState )
 					.onChange( async (enabled: boolean) => {
 						this.plugin.settings.saveFormState = enabled;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// ----- General Settings: Auto Reload On File Change -----
+		const autoReloadSetting = new Setting(containerEl);
+		autoReloadSetting
+			.setName("Auto Reload On File Change")
+			.setDesc("Reload the opened file automatically when it is modified outside of this view (by another app, a script, or vault sync). The scroll position is preserved. Writes made by the 'Save Form State into HTML File' feature do not trigger a reload.")
+			.addToggle( (toggle) => {
+				toggle
+					.setValue( this.plugin.settings.autoReloadOnChange )
+					.onChange( async (enabled: boolean) => {
+						this.plugin.settings.autoReloadOnChange = enabled;
 						await this.plugin.saveSettings();
 					});
 			});

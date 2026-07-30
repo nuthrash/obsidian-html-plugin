@@ -44,6 +44,15 @@ Details and limitations:
 - Nothing is written when nothing changed (no redundant file writes, no sync churn).
 - The feature can be turned off with the **"Save Form State into HTML File"** toggle in the plugin settings (enabled by default).
 
+## Auto Reload On File Change
+
+When the opened file is modified outside of the view — by an external editor, a script that regenerates it, or vault sync — the view reloads itself automatically, so what you see is never stale. The scroll position is preserved across the reload.
+
+- Bursts of write events (external editors and sync often write a file in several steps) are coalesced into a single reload.
+- Writes made by [Form State Persistence](#form-state-persistence) are recognized by comparing the file content with what the plugin wrote last, so saving form state never triggers a reload — content comparison instead of timestamps makes this race-free.
+- When a reload is triggered while a form state write is still pending, the pending write is dropped rather than flushed, so an external change is never overwritten by stale in-memory state.
+- The feature can be turned off with the **"Auto Reload On File Change"** toggle in the plugin settings (enabled by default). Pressing <kbd>F5</kbd> still reloads on demand.
+
 ## Install this plugin from Obsidian
 
 1. Head to ⚙"Settings" ⇨ "Community plugins" options page, make sure "Restricted mode" is turned off.

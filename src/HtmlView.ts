@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, FileView, TFile, sanitizeHTMLToDom, setIcon, Notice } from "obsidian";
+import { WorkspaceLeaf, FileView, TFile, TAbstractFile, sanitizeHTMLToDom, setIcon, Notice } from "obsidian";
 import { HtmlPluginSettings, isMacPlatform, isIosPlatform, DEFAULT_SETTINGS } from './HtmlPluginSettings';
 import { HtmlPluginOpMode } from './HtmlPluginOpMode';
 
@@ -17,12 +17,15 @@ export const MHTML_FILE_EXTENSIONS = ["mht", "mhtml"];
 export class HtmlView extends FileView {
 	settings: HtmlPluginSettings;
 	mainView!: HTMLElement;
+	private watcher: ExternalChangeWatcher | null = null;
+	private watcherRegistered: boolean = false;
+	private pendingScrollY: number = 0;
 
 	constructor(leaf: WorkspaceLeaf, private settings: HtmlPluginSettings) {
 		super(leaf);
 		this.settings = settings;
 	}
-  
+
 	async onLoadFile(file: TFile): Promise<void> {
 		// const style = getComputedStyle(this.containerEl.parentElement.querySelector('div.view-header'));
 		// const width = parseFloat(style.width);
@@ -121,6 +124,13 @@ export class HtmlView extends FileView {
 			this.mainView.formStateEligible = isPlainHtml && this.settings.saveFormState
 				&& this.settings.opMode !== HtmlPluginOpMode.HighRestricted
 				&& this.settings.opMode !== HtmlPluginOpMode.Text;
+			// let the file watcher know which content we wrote ourselves, so that
+			// form state saves do not look like an external modification
+			this.mainView.onSelfWrite = (text: string) => this.watcher?.noteSelfWrite( text );
+			// restore the scroll position when this load is a reload after a file change
+			this.mainView.pendingScrollY = this.pendingScrollY;
+			this.pendingScrollY = 0;
+			this.setupExternalChangeWatcher( file, isPlainHtml );
 			iframe.onload = async function() {
 				if( applyAnchorFix ) {
 					// fix some behaviors for consistency with Shadow DOM and Obsidian
@@ -134,6 +144,9 @@ export class HtmlView extends FileView {
 
 				if( iframe.mainView.formStateEligible )
 					await setupFormStatePersistence( iframe.mainView );
+
+				if( iframe.mainView.pendingScrollY > 0 )
+					iframe.contentWindow.scrollTo( 0, iframe.mainView.pendingScrollY );
 
 				// bubble iframe's 'keydown' event to parent (issue #16)
 				iframe.contentWindow.addEventListener( 'keydown', (evt) => {
@@ -149,9 +162,14 @@ export class HtmlView extends FileView {
 	}
 
 	onunload(): void {
+		this.watcher?.dispose();
+		this.watcher = null;
 	}
 
 	async onUnloadFile(file: TFile): Promise<void> {
+		this.watcher?.dispose();
+		this.watcher = null;
+
 		// write out pending form state before the file view goes away
 		const mv = this.mainView as any;
 		if( mv && mv.flushFormState ) {
@@ -160,6 +178,56 @@ export class HtmlView extends FileView {
 			} catch {}
 		}
 		return super.onUnloadFile(file);
+	}
+
+	// watch the opened file and reload the view when it is modified outside of it
+	private setupExternalChangeWatcher( file: TFile, isPlainHtml: boolean ): void {
+		this.watcher?.dispose();
+		this.watcher = createExternalChangeWatcher( {
+			// only plain HTML files can be self-written by the form state feature,
+			// so only those need the self-write comparison
+			readFile: isPlainHtml ? () => this.app.vault.read(file) : null,
+			onReload: () => this.reloadFile(),
+		} );
+
+		if( this.watcherRegistered )
+			return;
+
+		// registered once per view; Obsidian detaches it when the view is unloaded
+		this.watcherRegistered = true;
+		this.registerEvent( this.app.vault.on( 'modify', (modified: TAbstractFile) => {
+			if( !this.settings.autoReloadOnChange || !this.file )
+				return;
+			if( !(modified instanceof TFile) || modified.path !== this.file.path )
+				return;
+
+			this.watcher?.handleModify();
+		} ) );
+	}
+
+	private async reloadFile(): Promise<void> {
+		const file = this.file;
+		if( !file )
+			return;
+
+		const mv = this.mainView as any;
+		// the file on disk is newer than our in-memory form state, so drop the
+		// pending write instead of flushing it over the external change
+		if( mv && mv.cancelFormState )
+			mv.cancelFormState();
+
+		try {
+			this.pendingScrollY = mv?.iframe?.contentWindow?.scrollY || 0;
+		} catch {
+			this.pendingScrollY = 0;
+		}
+
+		await this.onLoadFile( file );
+	}
+
+	// F5 / "Reload file" - reload on demand
+	reloadFileOnDemand(): void {
+		this.reloadFile();
 	}
 	
 	onPaneMenu(menu: Menu, source: 'more-options' | 'tab-header' | string): void {
@@ -467,6 +535,72 @@ async function restoreStateBySettings( doc: HTMLDocument, settings: HtmlPluginSe
 	}
 }
 
+// ----- Auto reload on external file change (fork feature) -----
+// Reloads the view when the opened file is modified outside of it. Writes made by
+// the form state persistence feature are recognized by content and ignored, so
+// saving form state never triggers a reload loop.
+
+export const RELOAD_DEBOUNCE_MS = 300;
+
+export interface ExternalChangeWatcher {
+	noteSelfWrite( text: string ): void;
+	handleModify(): void;
+	dispose(): void;
+}
+
+export function createExternalChangeWatcher( opts: {
+	readFile: (() => Promise<string>) | null,
+	onReload: () => void | Promise<void>,
+	delay?: number,
+} ): ExternalChangeWatcher {
+	const delay = opts.delay ?? RELOAD_DEBOUNCE_MS;
+	let timer = 0;
+	let lastSelfWrittenText: string | null = null;
+	let disposed = false;
+
+	const reload = async () => {
+		timer = 0;
+		if( disposed )
+			return;
+
+		// a self-written file has the very content we wrote last, so comparing the
+		// content is race-free - unlike comparing timestamps
+		if( lastSelfWrittenText !== null && opts.readFile ) {
+			try {
+				if( (await opts.readFile()) === lastSelfWrittenText )
+					return; // our own form state write, not an external change
+			} catch {
+				// unreadable - fall through and reload anyway
+			}
+		}
+
+		if( !disposed )
+			await opts.onReload();
+	};
+
+	return {
+		noteSelfWrite: (text: string) => {
+			lastSelfWrittenText = text;
+		},
+		// external editors and sync often write a file in several steps,
+		// so coalesce bursts of events into a single reload
+		handleModify: () => {
+			if( disposed )
+				return;
+			if( timer )
+				window.clearTimeout( timer );
+			timer = window.setTimeout( reload, delay );
+		},
+		dispose: () => {
+			disposed = true;
+			if( timer ) {
+				window.clearTimeout( timer );
+				timer = 0;
+			}
+		},
+	};
+}
+
 // ----- Form state persistence (fork feature) -----
 // Stores current values of form elements as an inert JSON <script> block inside
 // the HTML file itself, and restores + re-dispatches events on next open.
@@ -592,8 +726,13 @@ async function setupFormStatePersistence( mainView: any ): Promise<void> {
 			else
 				newText = `${text}\n${block}`;
 
-			if( newText !== text )
+			if( newText !== text ) {
+				// tell the file watcher what we wrote, so this modification is not
+				// mistaken for an external change and does not trigger a reload
+				if( mainView.onSelfWrite )
+					mainView.onSelfWrite( newText );
 				await app.vault.modify( file, newText );
+			}
 			lastSavedJson = json;
 		} catch (e) {
 			console.warn( 'HTML Reader: could not save form state', e );
@@ -614,6 +753,15 @@ async function setupFormStatePersistence( mainView: any ): Promise<void> {
 			window.clearTimeout( saveTimer );
 			saveTimer = 0;
 			await saveNow();
+		}
+	};
+
+	// drop a pending save without writing it - used when the file changed on disk
+	// and our in-memory state is stale
+	mainView.cancelFormState = () => {
+		if( saveTimer ) {
+			window.clearTimeout( saveTimer );
+			saveTimer = 0;
 		}
 	};
 }
@@ -1047,7 +1195,8 @@ async function buildUserInteractiveFacilities( mainView: HTMLElement ): Promise<
 		else if( evt.key === 'F5' ) {
 			// Refresh whole HTML page, Feature request #28
 			//app.workspace.activeLeaf.rebuildView(); // OBSOLETE
-			this.app.workspace.getActiveViewOfType(HtmlView)?.leaf.rebuildView();
+			// NOTE: 'this' is not the view inside this handler, so go through mainView
+			mainView.app.workspace.getActiveViewOfType(HtmlView)?.reloadFileOnDemand();
 		}
 		else if( evt.key === 'Escape' ) {
 			// close search bar
