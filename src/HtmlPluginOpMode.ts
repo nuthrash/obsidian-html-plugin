@@ -4,7 +4,8 @@ export const enum HtmlPluginOpMode {
 	HighRestricted = "HighRestrictedMode",
 	Balance = "BalanceMode",
 	LowRestricted = "LowRestrictedMode",
-	Unrestricted = "UnestrictedMode"
+	Unrestricted = "UnestrictedMode",
+	Native = "NativeMode"
 }
 
 export const OP_MODE_INFO_DATA: Record<string, string> = {
@@ -12,7 +13,8 @@ export const OP_MODE_INFO_DATA: Record<string, string> = {
 	[HtmlPluginOpMode.HighRestricted]: "High Restricted Mode",
 	[HtmlPluginOpMode.Balance]: "Balance Mode",
 	[HtmlPluginOpMode.LowRestricted]: "Low Restricted Mode",
-	[HtmlPluginOpMode.Unrestricted]: "Unrestricted Mode"
+	[HtmlPluginOpMode.Unrestricted]: "Unrestricted Mode",
+	[HtmlPluginOpMode.Native]: "Native iframe (trusted local files only)"
 }
 
 export const OP_MODE_INFO_HTML: string = `
@@ -115,6 +117,16 @@ export const OP_MODE_INFO_HTML: string = `
 	<td> No </td>
 	<td> Yes </td>
   </tr>
+  <tr>
+	<td><span> Native iframe </span></td>
+	<td> Yes </td>
+	<td> Yes </td>
+	<td> Yes </td>
+	<td> Yes </td>
+	<td> File-defined </td>
+	<td> No </td>
+	<td> Yes </td>
+  </tr>
   <tbody>
 </table>
 </div>
@@ -149,6 +161,7 @@ export const OP_MODE_INFO_HTML: string = `
 	  <li>Change the capture settings of the original web page saving app to disable CSP or something else, and re-save the web page.</li>
 	</ul>
   </li>
+  <li><b style="color: red;">Native iframe</b> - Desktop only. Loads the selected local HTML file directly in a sandboxed iframe so its own JavaScript and relative resources can run. Use this mode only for local HTML files you trust. HTML Reader's injected search, zoom, background color, and link-rewriting features are unavailable in this mode.</li>
 </ol>
 </details>
 `;

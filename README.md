@@ -55,6 +55,7 @@ Set Operating Mode for this plugin to protect user and app.
 | **Balance Mode**         | Yes    | Yes     | No                    | Yes              | Yes | Yes | Yes |
 | **Low Restricted Mode**  | Yes    | Yes     | Partial<sup>[2]</sup> | Yes              | No  | No  | Yes |
 | **Unrestricted Mode**    | Yes    | Yes     | Yes<sup>[3]</sup>     | Yes              | No  | No  | Yes |
+| **Native iframe**        | Yes    | Yes     | Yes                   | Yes              | File-defined | No | Yes |
 
 *: [Declarative Shadow DOM](https://web.dev/declarative-shadow-dom/) <br />
 #: [Content Security Policy](https://en.wikipedia.org/wiki/Content_Security_Policy) <br />
@@ -79,6 +80,8 @@ Set Operating Mode for this plugin to protect user and app.
     Sometimes you still cannot see what you want, then you should check the content of HTML file. This mode is just leave the content alone (only <ins>adjust the external link anchor tags to let them open in default browser windows</ins>), but the file might has some self-contained security protection facilities (such as CSP) and they would block something to avoid XSS attacks. If you find something like `<meta http-equiv="Content-Security-Policy" />` inside the HTML file, it means the file is protected by CSP mechanism. You might
     - Modify or remove the CSP `<meta>` tag by hands.
     - Change the capture settings of the original web page saving app to disable CSP or something else, and re-save the web page.
+
+6. **Native iframe** - Desktop only. This mode navigates a sandboxed iframe directly to the selected local HTML resource, allowing the document's own JavaScript and relative resources to run. Use it only for local HTML files you trust. HTML Reader does not sanitize the document, and its injected search, zoom, background color, and link-rewriting features are unavailable in this mode.
 
 </details>
 <details>

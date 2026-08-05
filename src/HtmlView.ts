@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, FileView, TFile, sanitizeHTMLToDom, setIcon, Notice } from "obsidian";
+import { WorkspaceLeaf, FileView, TFile, sanitizeHTMLToDom, setIcon, Notice, Platform } from "obsidian";
 import { HtmlPluginSettings, isMacPlatform, isIosPlatform, DEFAULT_SETTINGS } from './HtmlPluginSettings';
 import { HtmlPluginOpMode } from './HtmlPluginOpMode';
 
@@ -32,28 +32,30 @@ export class HtmlView extends FileView {
 		this.contentEl.empty();
 	
 		try {
-			// whole HTML file ArrayBuffer
-			const contents = await this.app.vault.readBinary(file);
-			
-			// Obsidian's HTMLElement and Node API: https://github.com/obsidianmd/obsidian-api/blob/master/obsidian.d.ts
-			
+			const isNativeMode = this.settings.opMode === HtmlPluginOpMode.Native;
 			let htmlStr = null;
-			
-			if( this.settings.mhtmlSupport && (MHTML_FILE_EXTENSIONS.indexOf(file.extension) >= 0) ) {
-				// Support MHTML, Feature request #19
-				const { data, title, favicons } = await convert(new Uint8Array(contents));
-				htmlStr = data;
-			} else {
-				try {
-					// the HTML file made by SingleFileZ
-					globalThis.zip = zip;
-					const { docContent } = await extract(new Blob([new Uint8Array(contents)]), { noBlobURL: true });
-					
-					htmlStr = docContent;
-				} catch {
-					// the HTML file not made by SingleFileZ			
-					const decoder = new TextDecoder();
-					htmlStr = decoder.decode(contents); // decode with UTF8
+
+			if( !isNativeMode ) {
+				// whole HTML file ArrayBuffer
+				const contents = await this.app.vault.readBinary(file);
+
+				// Obsidian's HTMLElement and Node API: https://github.com/obsidianmd/obsidian-api/blob/master/obsidian.d.ts
+				if( this.settings.mhtmlSupport && (MHTML_FILE_EXTENSIONS.indexOf(file.extension) >= 0) ) {
+					// Support MHTML, Feature request #19
+					const { data, title, favicons } = await convert(new Uint8Array(contents));
+					htmlStr = data;
+				} else {
+					try {
+						// the HTML file made by SingleFileZ
+						globalThis.zip = zip;
+						const { docContent } = await extract(new Blob([new Uint8Array(contents)]), { noBlobURL: true });
+
+						htmlStr = docContent;
+					} catch {
+						// the HTML file not made by SingleFileZ
+						const decoder = new TextDecoder();
+						htmlStr = decoder.decode(contents); // decode with UTF8
+					}
 				}
 			}
 			
@@ -108,6 +110,16 @@ export class HtmlView extends FileView {
 					iframe.srcdoc = cleanHtmlText;
 					applyAnchorFix = false
 					break;
+
+				case HtmlPluginOpMode.Native:
+					if( !Platform.isDesktopApp )
+						throw new Error("Native iframe mode is available only in the desktop app.");
+					if( !baseHref )
+						throw new Error("Unable to resolve the local HTML resource URL.");
+					iframe!.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads");
+					iframe!.setAttribute("src", baseHref);
+					applyAnchorFix = false;
+					break;
 			}
 				
 			iframe.mainView = this.mainView;
@@ -116,6 +128,8 @@ export class HtmlView extends FileView {
 			this.mainView.searchBar = searchBar;
 			this.mainView.iframe = iframe;
 			iframe.onload = async function() {
+				if( isNativeMode )
+					return;
 				if( applyAnchorFix ) {
 					// fix some behaviors for consistency with Shadow DOM and Obsidian
 					applyUserInteractivePatches( iframe.contentDocument );
@@ -145,6 +159,10 @@ export class HtmlView extends FileView {
 	onPaneMenu(menu: Menu, source: 'more-options' | 'tab-header' | string): void {
 		if( source !== 'more-options' ) // only handle 'more-options' onMoreOptionsMenu()
 			return;
+		if( this.settings.opMode === HtmlPluginOpMode.Native ) {
+			super.onPaneMenu(menu, source);
+			return;
+		}
 
 		menu.addItem((item) => {
 			item
@@ -1135,4 +1153,3 @@ export const BM_ALLOWED_ATTRS = [
 	'async', 'charset', 'collapse', 'collapsed', 'content', 'data', 'defer', 'external', 'frameborder', 'http-equiv', 'property', 'sandbox', 'scoped', 'scrolling', 'shadowroot', 'text', 'url', 'var',
 	'aria-*', 'data-*', 'href-*', 'src-*', 'style-*',
 ];
-
