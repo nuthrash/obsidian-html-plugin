@@ -67,7 +67,7 @@ export class HtmlView extends FileView {
 			
 			this.mainView = this.contentEl.createDiv();
 			this.mainView.setAttribute( "style", "display: flex; flex-direction: column; height: 100%; padding: 0;" );
-			this.mainView.innerHTML = MAINVIEW_HTML; // direct assign safe HTML code
+			this.mainView.innerHTML = MAINVIEW_HTML || "<html></html>"; // direct assign safe HTML code
 			const searchBar = this.mainView.querySelector( "#ohpMainView" );
 			const iframe = this.mainView.querySelector( "#ohpIframe" );
 			const baseHref = getHtmlBaseHref(this.app, file);
@@ -152,6 +152,9 @@ export class HtmlView extends FileView {
 				iframe.contentWindow.addEventListener( 'keydown', (evt) => {
 					iframe.dispatchEvent( new evt.constructor(evt.type, evt) );
 				}, false );
+
+				// Workaround: install a fake instanceOf() for Obsidian's app.js to avoid TypeError exception  (issue #33)
+				iframe.contentWindow.document.body.instanceOf = (typeObject) => { return false; };
 			};
 			
 			dispatchEvent(new CustomEvent("DOMContentLoaded"));

@@ -22,7 +22,7 @@ export const DEFAULT_SETTINGS: HtmlPluginSettings = {
 	zoomValue: 1.0,
 	extraFileExt: '',
 	mhtmlSupport: false, // Support MHTML, Feature request #19
-	saveFormState: true, // Persist form input values into the HTML file
+	saveFormState: false, // Persist form input values into the HTML file
 	autoReloadOnChange: true, // Reload the view when the file changes on disk
 }
 
@@ -63,7 +63,8 @@ export class HtmlSettingTab extends PluginSettingTab {
 			});
 			
 		if( !this.opModeInfoFrag || this.opModeInfoFrag.childNodes.length <= 0 ) {
-			this.opModeInfoFrag = (new Range()).createContextualFragment(OP_MODE_INFO_HTML);
+			const range = new Range();
+			this.opModeInfoFrag = range.createContextualFragment(OP_MODE_INFO_HTML);
 		}
 		
 		opModeSetting.infoEl.appendChild( this.opModeInfoFrag.cloneNode(true) );

@@ -3,13 +3,14 @@
 This is a plugin for Obsidian (https://obsidian.md). Can open document with `.html`  and `.htm` file extensions.
 
 - [How to use](#how-to-use)
-- [Form State Persistence](#form-state-persistence)
 - [Install this plugin from Obsidian](#install-this-plugin-from-obsidian)
 - [Manually installing the plugin](#manually-installing-the-plugin)
 - [HTML Reader Settings](#html-reader-settings)
   - [General Settings](#general-settings)
   - [Hotkeys and Touch Gestures Settings](#hotkeys-and-touch-gestures-settings)
 - [More Options](#more-options)
+- [Form State Persistence](#form-state-persistence)
+- [Auto Reload On File Change](#auto-reload-on-file-change)
 - [How to build this plugin from source code](#how-to-build-this-plugin-from-source-code)
 - [Known issues](#known-issues)
 
@@ -18,40 +19,6 @@ This is a plugin for Obsidian (https://obsidian.md). Can open document with `.ht
 1. Put .html or .htm files to any obsidian-html-plugin installed vault folder
 2. Click any HTML or HTM item to open it
 3. Reading
-
-## Form State Persistence
-
-Interactive HTML files (dashboards, calculators, forms) normally reset to their default values every time they are reopened. With this feature, the plugin remembers what the user changed:
-
-1. Move a slider, type a value, tick a checkbox, pick a select option…
-2. About 1 second after the last change, the plugin writes the current state of all form controls into the HTML file itself, as a single inert JSON block placed right before `</body>`:
-
-   ```html
-   <script type="application/json" id="ohp-form-state">{"#mySlider":{"v":"75"}, ...}</script>
-   ```
-
-3. The next time the file is opened, the saved values are restored and synthetic `input`/`change` events are dispatched, so the page's own scripts (charts, computed outputs) react as if the user had entered the values manually.
-
-Because the state lives inside the file, it travels with it — vault sync (iCloud, Obsidian Sync, git…) carries the state to other devices. The rest of the file is never touched: only the JSON block is inserted or replaced.
-
-Details and limitations:
-
-- Persisted controls: `<input>` (including `range`, `number`, `checkbox`, `radio`, `date`, …), `<textarea>`, `<select>` (including multiple). Controls are identified by their `id`, or by document position when they have no `id`.
-- **Never** persisted: `type="password"`, `type="file"`, and `type="hidden"` inputs.
-- Works only for plain-text `.html`/`.htm` files — not for SingleFileZ or MHTML files.
-- Works in every Operating Mode except **High Restricted** and **Text** (those modes disable form controls anyway). Note that in the default **Balance** mode text inputs are read-only by design, but sliders, checkboxes, radios and selects still work and are persisted.
-- Pending changes are flushed when the file view is closed.
-- Nothing is written when nothing changed (no redundant file writes, no sync churn).
-- The feature can be turned off with the **"Save Form State into HTML File"** toggle in the plugin settings (enabled by default).
-
-## Auto Reload On File Change
-
-When the opened file is modified outside of the view — by an external editor, a script that regenerates it, or vault sync — the view reloads itself automatically, so what you see is never stale. The scroll position is preserved across the reload.
-
-- Bursts of write events (external editors and sync often write a file in several steps) are coalesced into a single reload.
-- Writes made by [Form State Persistence](#form-state-persistence) are recognized by comparing the file content with what the plugin wrote last, so saving form state never triggers a reload — content comparison instead of timestamps makes this race-free.
-- When a reload is triggered while a form state write is still pending, the pending write is dropped rather than flushed, so an external change is never overwritten by stale in-memory state.
-- The feature can be turned off with the **"Auto Reload On File Change"** toggle in the plugin settings (enabled by default). Pressing <kbd>F5</kbd> still reloads on demand.
 
 ## Install this plugin from Obsidian
 
@@ -175,6 +142,41 @@ Zoom in current file.
 Zoom out current file.
 ### Reset zoom
 Reset current file zoom.
+
+
+## Form State Persistence
+
+Interactive HTML files (dashboards, calculators, forms) normally reset to their default values every time they are reopened. With this feature, the plugin remembers what the user changed:
+
+1. Move a slider, type a value, tick a checkbox, pick a select option…
+2. About 1 second after the last change, the plugin writes the current state of all form controls into the HTML file itself, as a single inert JSON block placed right before `</body>`:
+
+   ```html
+   <script type="application/json" id="ohp-form-state">{"#mySlider":{"v":"75"}, ...}</script>
+   ```
+
+3. The next time the file is opened, the saved values are restored and synthetic `input`/`change` events are dispatched, so the page's own scripts (charts, computed outputs) react as if the user had entered the values manually.
+
+Because the state lives inside the file, it travels with it — vault sync (iCloud, Obsidian Sync, git…) carries the state to other devices. The rest of the file is never touched: only the JSON block is inserted or replaced.
+
+Details and limitations:
+
+- Persisted controls: `<input>` (including `range`, `number`, `checkbox`, `radio`, `date`, …), `<textarea>`, `<select>` (including multiple). Controls are identified by their `id`, or by document position when they have no `id`.
+- **Never** persisted: `type="password"`, `type="file"`, and `type="hidden"` inputs.
+- Works only for plain-text `.html`/`.htm` files — not for SingleFileZ or MHTML files.
+- Works in every Operating Mode except **High Restricted** and **Text** (those modes disable form controls anyway). Note that in the default **Balance** mode text inputs are read-only by design, but sliders, checkboxes, radios and selects still work and are persisted.
+- Pending changes are flushed when the file view is closed.
+- Nothing is written when nothing changed (no redundant file writes, no sync churn).
+- The feature can be turned off with the **"Save Form State into HTML File"** toggle in the plugin settings (disabled by default).
+
+## Auto Reload On File Change
+
+When the opened file is modified outside of the view — by an external editor, a script that regenerates it, or vault sync — the view reloads itself automatically, so what you see is never stale. The scroll position is preserved across the reload.
+
+- Bursts of write events (external editors and sync often write a file in several steps) are coalesced into a single reload.
+- Writes made by [Form State Persistence](#form-state-persistence) are recognized by comparing the file content with what the plugin wrote last, so saving form state never triggers a reload — content comparison instead of timestamps makes this race-free.
+- When a reload is triggered while a form state write is still pending, the pending write is dropped rather than flushed, so an external change is never overwritten by stale in-memory state.
+- The feature can be turned off with the **"Auto Reload On File Change"** toggle in the plugin settings (enabled by default). Pressing <kbd>F5</kbd> still reloads on demand.
 
 
 ## How to build this plugin from source code
