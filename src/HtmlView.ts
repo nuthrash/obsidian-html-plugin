@@ -67,7 +67,7 @@ export class HtmlView extends FileView {
 			
 			this.mainView = this.contentEl.createDiv();
 			this.mainView.setAttribute( "style", "display: flex; flex-direction: column; height: 100%; padding: 0;" );
-			this.mainView.innerHTML = MAINVIEW_HTML || "<html></html>"; // direct assign safe HTML code
+			this.mainView.insertAdjacentHTML( 'beforeend', MAINVIEW_HTML ); // direct assign safe HTML code
 			const searchBar = this.mainView.querySelector( "#ohpMainView" );
 			const iframe = this.mainView.querySelector( "#ohpIframe" );
 			const baseHref = getHtmlBaseHref(this.app, file);

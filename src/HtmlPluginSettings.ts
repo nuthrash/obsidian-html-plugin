@@ -29,7 +29,6 @@ export const DEFAULT_SETTINGS: HtmlPluginSettings = {
 export class HtmlSettingTab extends PluginSettingTab {
 	app: App;
 	plugin: HtmlPlugin;
-	opModeInfoFrag!: DocumentFragment;
 
 	constructor(app: App, plugin: HtmlPlugin) {
 		super(app, plugin);
@@ -61,13 +60,8 @@ export class HtmlSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-			
-		if( !this.opModeInfoFrag || this.opModeInfoFrag.childNodes.length <= 0 ) {
-			const range = new Range();
-			this.opModeInfoFrag = range.createContextualFragment(OP_MODE_INFO_HTML);
-		}
 		
-		opModeSetting.infoEl.appendChild( this.opModeInfoFrag.cloneNode(true) );
+		opModeSetting.infoEl.insertAdjacentHTML( 'beforeend', OP_MODE_INFO_HTML );
 		
 		// ----- General Settings: Background Color -----
 		const bgColorSetting = new Setting(containerEl);
