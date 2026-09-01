@@ -65,18 +65,22 @@ export class HtmlView extends FileView {
 			// https://github.com/nefe/number-precision
 			NP.enableBoundaryChecking(false); // default param is true
 			
+			let parser = new DOMParser();
 			this.mainView = this.contentEl.createDiv();
 			this.mainView.setAttribute( "style", "display: flex; flex-direction: column; height: 100%; padding: 0;" );
-			this.mainView.insertAdjacentHTML( 'beforeend', MAINVIEW_HTML ); // direct assign safe HTML code
+			//this.mainView.insertAdjacentHTML( 'beforeend', MAINVIEW_HTML ); // direct assign safe HTML code
+			let mainViewEl = parser.parseFromString( MAINVIEW_HTML, 'text/html' );
+			this.mainView.appendChild( mainViewEl.body.childNodes[0] ); // append document-search-container
+			this.mainView.appendChild( mainViewEl.body.childNodes[1] ); // append iframe
 			const searchBar = this.mainView.querySelector( "#ohpMainView" );
 			const iframe = this.mainView.querySelector( "#ohpIframe" );
-			const baseHref = getHtmlBaseHref(this.app, file);
+			const baseHref = getHtmlBaseHref( this.app, file );
 			
 			let dom = null, applyAnchorFix = true;
 			switch( this.settings.opMode ) {
 				case HtmlPluginOpMode.Balance:
-					dom = (new window.DOMParser()).parseFromString( htmlStr, 'text/html' );
-					ensureBaseHref(dom, baseHref);
+					dom = parser.parseFromString( htmlStr, 'text/html' );
+					ensureBaseHref( dom, baseHref );
 					await removeScriptTagsAndExtScripts( dom );
 					await sanitizeAndApplyPatches( dom );
 					await restoreStateBySettings( dom, this.settings );
@@ -86,19 +90,19 @@ export class HtmlView extends FileView {
 					break;
 				
 				case HtmlPluginOpMode.LowRestricted:
-					dom = (new window.DOMParser()).parseFromString( htmlStr, 'text/html' );
-					ensureBaseHref(dom, baseHref);
+					dom = parser.parseFromString( htmlStr, 'text/html' );
+					ensureBaseHref( dom, baseHref );
 					await removeScriptTagsAndExtScripts( dom );
 					await restoreStateBySettings( dom, this.settings );
 					iframe.srcdoc = dom.documentElement.outerHTML;
 					break;
 				
 				case HtmlPluginOpMode.Unrestricted:
-					iframe.srcdoc = injectBaseHrefToHtml(htmlStr, baseHref);
+					iframe.srcdoc = injectBaseHrefToHtml( htmlStr, baseHref );
 					break;
 				
 				case HtmlPluginOpMode.HighRestricted:
-					const purifier = new window.DOMPurify();
+					const purifier = new DOMPurify();
 					purifier.addHook( 'afterSanitizeAttributes' , ohpAfterSanitizeAttributes ); // disable some elements to avoid XSS attacks
 					const cleanHtmlHR = purifier.sanitize( injectBaseHrefToHtml(htmlStr, baseHref), hrModeConfig );
 					// iframe.sandbox = "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-top-navigation-by-user-activation";
@@ -107,7 +111,7 @@ export class HtmlView extends FileView {
 					break;
 									
 				case HtmlPluginOpMode.Text:
-					const cleanHtmlText = (new window.DOMPurify()).sanitize( injectBaseHrefToHtml(htmlStr, baseHref), textModeConfig );
+					const cleanHtmlText = (new DOMPurify()).sanitize( injectBaseHrefToHtml(htmlStr, baseHref), textModeConfig );
 					iframe.sandbox = "allow-same-origin";
 					iframe.csp = "default-src 'none'; script-src 'none'; object-src 'none'; frame-src 'none'; font-src 'self' data:; img-src 'none'; style-src 'unsafe-inline'; media-src 'none'; ";
 					iframe.srcdoc = cleanHtmlText;
@@ -298,9 +302,9 @@ function getHtmlBaseHref(app: App, file: TFile): string {
 }
 
 function ensureBaseHref(doc: Document, baseHref: string): void {
-	if (!doc?.head || !baseHref) return;
+	if( !doc?.head || !baseHref ) return;
 	let baseElm = doc.querySelector("base");
-	if (!baseElm) {
+	if( !baseElm ) {
 		baseElm = doc.createElement("base");
 		doc.head.prepend(baseElm);
 	}
@@ -308,10 +312,10 @@ function ensureBaseHref(doc: Document, baseHref: string): void {
 }
 
 function injectBaseHrefToHtml(htmlStr: string, baseHref: string): string {
-	if (!htmlStr || !baseHref) return htmlStr;
+	if( !htmlStr || !baseHref ) return htmlStr;
 	try {
-		const doc = (new window.DOMParser()).parseFromString(htmlStr, "text/html");
-		ensureBaseHref(doc, baseHref);
+		const doc = (new DOMParser()).parseFromString( htmlStr, "text/html" );
+		ensureBaseHref( doc, baseHref );
 		return doc.documentElement.outerHTML;
 	} catch {
 		return htmlStr;
@@ -321,8 +325,8 @@ function injectBaseHrefToHtml(htmlStr: string, baseHref: string): string {
 export async function showError(e: Error | any): Promise<void> {
 	const notice = new Notice("", 8000);
 	// @ts-ignore
-	notice.noticeEl.createEl('strong', { text: 'HTML Reader error' });
-	notice.noticeEl.createDiv({ text: `${e.message}` });
+	notice.messageEl.createEl('strong', { text: 'HTML Reader error' });
+	notice.messageEl.createDiv({ text: `${e.message}` });
 }
 
 // while clicking, fix internal links(in-page anchor) replaced by Shadow Root and IFrame at runtime

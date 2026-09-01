@@ -61,7 +61,11 @@ export class HtmlSettingTab extends PluginSettingTab {
 					});
 			});
 		
-		opModeSetting.infoEl.insertAdjacentHTML( 'beforeend', OP_MODE_INFO_HTML );
+		//opModeSetting.infoEl.insertAdjacentHTML( 'beforeend', OP_MODE_INFO_HTML );
+		let opModeInfo = (new DOMParser()).parseFromString( OP_MODE_INFO_HTML, 'text/html' );
+		opModeSetting.infoEl.appendChild( opModeInfo.head.childNodes[0] ); // append <style>
+		opModeSetting.infoEl.appendChild( opModeInfo.body.childNodes[0] ); // append Comparsion
+		opModeSetting.infoEl.appendChild( opModeInfo.body.childNodes[1] ); // appen Detail Explanation
 		
 		// ----- General Settings: Background Color -----
 		const bgColorSetting = new Setting(containerEl);
