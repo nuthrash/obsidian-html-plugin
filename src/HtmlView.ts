@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, FileView, TFile, TAbstractFile, sanitizeHTMLToDom, setIcon, Notice } from "obsidian";
+import { App, WorkspaceLeaf, FileView, TFile, TAbstractFile, sanitizeHTMLToDom, setIcon, Notice } from "obsidian";
 import { HtmlPluginSettings, isMacPlatform, isIosPlatform, DEFAULT_SETTINGS } from './HtmlPluginSettings';
 import { HtmlPluginOpMode } from './HtmlPluginOpMode';
 
@@ -75,7 +75,11 @@ export class HtmlView extends FileView {
 			const searchBar = this.mainView.querySelector( "#ohpMainView" );
 			const iframe = this.mainView.querySelector( "#ohpIframe" );
 			const baseHref = getHtmlBaseHref( this.app, file );
-			
+
+			// Obsidian's CSP blocks <link rel="stylesheet"> to vault files inside the iframe, so paste them in as <style>
+			if( isPlainHtml )
+				htmlStr = await inlineLocalStylesheets( this.app, file, htmlStr );
+
 			let dom = null, applyAnchorFix = true;
 			switch( this.settings.opMode ) {
 				case HtmlPluginOpMode.Balance:
@@ -309,6 +313,41 @@ function ensureBaseHref(doc: Document, baseHref: string): void {
 		doc.head.prepend(baseElm);
 	}
 	baseElm.setAttribute("href", baseHref);
+}
+
+// Resolve a relative href (e.g. "../tokens.css?v=2") against the HTML file's folder into a vault path.
+function resolveVaultPath(fromFile: TFile, href: string): string | null {
+	const clean = decodeURIComponent( href.split(/[?#]/)[0] );
+	if( !clean ) return null;
+	const parts = clean.startsWith("/") ? [] : (fromFile.parent?.path ?? "").split("/").filter(p => p && p !== "/");
+	for( const seg of clean.split("/") ) {
+		if( !seg || seg === "." ) continue;
+		if( seg === ".." ) { if( parts.length === 0 ) return null; parts.pop(); }
+		else parts.push( seg );
+	}
+	return parts.join("/");
+}
+
+async function inlineLocalStylesheets(app: App, file: TFile, htmlStr: string): Promise<string> {
+	const doc = (new DOMParser()).parseFromString( htmlStr, "text/html" );
+	const links = Array.from( doc.querySelectorAll('link[rel~="stylesheet" i][href]') ) as HTMLLinkElement[];
+	let changed = false;
+	for( const link of links ) {
+		const href = link.getAttribute("href") ?? "";
+		if( /^([a-z][a-z0-9+.-]*:|\/\/)/i.test(href) ) continue; // http:, data:, app: … leave as-is
+		const path = resolveVaultPath( file, href );
+		const cssFile = path ? app.vault.getAbstractFileByPath( path ) : null;
+		if( !(cssFile instanceof TFile) ) continue;
+		const style = doc.createElement("style");
+		const media = link.getAttribute("media");
+		if( media ) style.setAttribute("media", media);
+		style.setAttribute("data-ohp-inlined", href);
+		style.textContent = await app.vault.cachedRead( cssFile );
+		link.replaceWith( style );
+		changed = true;
+	}
+	if( !changed ) return htmlStr;
+	return (doc.doctype ? "<!DOCTYPE html>\n" : "") + doc.documentElement.outerHTML;
 }
 
 function injectBaseHrefToHtml(htmlStr: string, baseHref: string): string {
