@@ -389,11 +389,18 @@ async function sanitizeAndApplyPatches( doc: HTMLDocument ): Promise<void> {
 	for( const elm of doc.all ) {
 		let illSet = new Set<string>();
 		for( const attr of elm.attributes ) {
-			let name = attr.name;
-			if( name.indexOf('-') > 0 )
-				name = `${name.split('-')[0]}-*`;
+			// BM_ALLOWED_ATTRS is lowercase, but the HTML parser keeps SVG attribute names
+			// camelCase (viewBox, refX, markerWidth), so compare in lowercase.
+			const lowerName = attr.name.toLowerCase();
+			
+			// Exact entries first, so hyphenated ones such as 'text-anchor' or 'stroke-width'
+			// match; the 'prefix-*' wildcard alone never matched them. 'http-equiv' stays
+			// removed as before, otherwise <meta http-equiv="refresh"> could redirect the view.
+			let allowed = (lowerName !== 'http-equiv') && BM_ALLOWED_ATTRS.contains( lowerName );
+			if( !allowed && lowerName.indexOf('-') > 0 )
+				allowed = BM_ALLOWED_ATTRS.contains( `${lowerName.split('-')[0]}-*` );
 				
-			if( !BM_ALLOWED_ATTRS.contains(name) && !illSet.has(attr.name) )
+			if( !allowed && !illSet.has(attr.name) )
 				illSet.add( attr.name );
 		}
 		
