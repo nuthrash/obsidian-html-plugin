@@ -453,9 +453,27 @@ function applyUserInteractivePatches( doc: HTMLDocument ) {
 		return;
 	}
 	
+	// 'overflow-x: hidden' on the root element or body creates a scroll container,
+	// which breaks 'position: sticky' sidebars (e.g. table-of-contents navigation)
+	// in documents scrolled inside the iframe. Detect sticky elements up-front so
+	// horizontal clipping can be applied in a sticky-safe way instead.
+	let hasStickyDescendant = false;
+	try {
+		const view = doc.defaultView;
+		const walker = doc.createTreeWalker( doc.body, NodeFilter.SHOW_ELEMENT );
+		while( walker.nextNode() ) {
+			if( view.getComputedStyle( walker.currentNode as Element ).position === 'sticky' ) {
+				hasStickyDescendant = true;
+				break;
+			}
+		}
+	} catch {
+		// style computation unavailable; fall through with default behavior
+	}
+
 	// avoid some HTML files unable to scroll, only when 'overflow' is not set
 	if( doc.body.style.overflow === '' ) {
-		doc.body.style.overflowX = 'hidden';
+		doc.body.style.overflowX = hasStickyDescendant ? 'clip' : 'hidden';
 		doc.body.style.overflowY = 'auto';
 	}
 	// avoid horizontal overflow on any element
@@ -465,8 +483,14 @@ function applyUserInteractivePatches( doc: HTMLDocument ) {
 	if( doc.body.style.userSelect === '' )
 		doc.body.style.userSelect = 'text';
 	
-	// also constrain html root element
-	if( doc.documentElement.style.overflowX === '' )
+	// also constrain html root element.
+	// Non-visible overflow-x on the root element disables 'position: sticky'
+	// descendants, so keep the root untouched for sticky documents and clip on
+	// the body instead, which preserves sticky behavior.
+	if( hasStickyDescendant ) {
+		doc.documentElement.style.overflowX = 'visible';
+		doc.body.style.overflowX = 'clip';
+	} else if( doc.documentElement.style.overflowX === '' )
 		doc.documentElement.style.overflowX = 'hidden';
 }
 
