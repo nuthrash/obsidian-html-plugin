@@ -67,12 +67,15 @@ export class HtmlView extends FileView {
 			
 			let parser = new DOMParser();
 			this.mainView = this.contentEl.createDiv();
-			this.mainView.setAttribute( "style", "display: flex; flex-direction: column; height: 100%; padding: 0;" );
-			//this.mainView.insertAdjacentHTML( 'beforeend', MAINVIEW_HTML ); // direct assign safe HTML code
+			if( this.app.isMobile ) // mobile devices need different style (issue #37)
+				this.mainView.setAttribute( "style", "display: flex; flex-direction: column; height: 100dvh !important; padding: 0; overflow: hidden !important;" );
+			else
+				this.mainView.setAttribute( "style", "display: flex; flex-direction: column; height: 100%; padding: 0;" );
+			//this.mainView.insertAdjacentHTML( 'beforeend', MAINVIEW_HTML ); // direct assign safe HTML code, the Obsidian team does not allow this operation
 			let mainViewEl = parser.parseFromString( MAINVIEW_HTML, 'text/html' );
 			this.mainView.appendChild( mainViewEl.body.childNodes[0] ); // append document-search-container
 			this.mainView.appendChild( mainViewEl.body.childNodes[1] ); // append iframe
-			const searchBar = this.mainView.querySelector( "#ohpMainView" );
+			const searchBar = this.mainView.querySelector( "#ohpSearchBar" );
 			const iframe = this.mainView.querySelector( "#ohpIframe" );
 			const baseHref = getHtmlBaseHref( this.app, file );
 			
@@ -159,6 +162,10 @@ export class HtmlView extends FileView {
 
 				// Workaround: install a fake instanceOf() for Obsidian's app.js to avoid TypeError exception  (issue #33)
 				iframe.contentWindow.document.body.instanceOf = (typeObject) => { return false; };
+
+				// some extra methods for Mobile devices (issue #37)
+				if( iframe.mainView.app.isMobile )
+					applyMobileMethods( iframe );
 			};
 			
 			dispatchEvent(new CustomEvent("DOMContentLoaded"));
@@ -449,13 +456,13 @@ async function sanitizeAndApplyPatches( doc: HTMLDocument ): Promise<void> {
 
 function applyUserInteractivePatches( doc: HTMLDocument ) {
 	if( !doc.body.style ) {
-		doc.body.setAttribute( 'style', "overflow-x: hidden; overflow-y: auto; user-select: text; max-width: 100%; word-wrap: break-word;" );
+		doc.body.setAttribute( 'style', "overflow-x: auto; overflow-y: auto; user-select: text; max-width: 100%; word-wrap: break-word;" );
 		return;
 	}
 	
 	// avoid some HTML files unable to scroll, only when 'overflow' is not set
 	if( doc.body.style.overflow === '' ) {
-		doc.body.style.overflowX = 'hidden';
+		doc.body.style.overflowX = 'auto';
 		doc.body.style.overflowY = 'auto';
 	}
 	// avoid horizontal overflow on any element
@@ -466,8 +473,8 @@ function applyUserInteractivePatches( doc: HTMLDocument ) {
 		doc.body.style.userSelect = 'text';
 	
 	// also constrain html root element
-	if( doc.documentElement.style.overflowX === '' )
-		doc.documentElement.style.overflowX = 'hidden';
+	//if( doc.documentElement.style.overflowX === '' )
+	//	doc.documentElement.style.overflowX = 'hidden';
 }
 
 async function removeScriptTagsAndExtScripts( doc: HTMLDocument ): Promise<void> {
@@ -1357,6 +1364,52 @@ async function buildUserInteractiveFacilities( mainView: HTMLElement ): Promise<
 	}, { passive: false });
 }
 
+function applyMobileMethods( iframe: HTMLElement )
+{
+	if( !iframe )
+		return;
+
+	const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+	//const innerBody = iframeDoc.body;
+	//const innerHtml = iframeDoc.documentElement;
+
+	if( !iframeDoc )
+		return;
+	
+	const settings = iframe.mainView.settings;
+
+	// currently, only handle LowRestricted and Unrestricted modes
+	switch( settings.opMode ) {
+		case HtmlPluginOpMode.LowRestricted:
+		case HtmlPluginOpMode.Unrestricted:
+			break;
+		default:
+			return;
+	}
+
+	// listen focus in event of input elements: fix viewport problems
+	iframeDoc.addEventListener( 'focusin', (evt) => {
+		const target = evt.target as HTMLElement;
+		if( target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) ) {
+			// delay timer: scroll the input element to view-able area
+			setTimeout( () => {
+				target.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+				
+				if( window.visualViewport ) {
+					window.scrollTo( 0, 0 );
+				}
+			}, 300 );
+		}
+	}, true );
+
+	// listen focus out event of input elements: scroll sync. with iframe and MainView
+	iframeDoc.addEventListener( 'focusout', () => {
+		setTimeout( () => {
+			window.scrollTo( 0, 0 );
+			iframeDoc.body.scrollTop = iframeDoc.body.scrollTop;
+		}, 100 );
+	}, true );
+}
 
 // https://github.com/obsidianmd/obsidian-api/blob/bceb489fc25ceba5973119d6e57759d64850f90d/obsidian.d.ts#LL1555C18-L1555C25
 class Hotkey {
@@ -1372,7 +1425,7 @@ const HIGHLIGHT_CLASS_NAME: string = 'obsidian-search-match-mark'; // block mark
 const MARK_CLASS_NAME: string = 'obsidian-search-match-mark'; // block mark for across elements
 
 const MAINVIEW_HTML: string = `
-<div class="document-search-container" style="display: none; border: none; width: 100%" width="100%" id="ohpMainView">
+<div class="document-search-container" style="display: none; border: none; width: 100%" width="100%" id="ohpSearchBar">
   <div class="document-search">
     <input class="document-search-input" type="search" placeholder="${i18next.t("editor.search.placeholder-find")}" id="ohpSearchInput">
     <div class="document-search-buttons">
@@ -1384,7 +1437,7 @@ const MAINVIEW_HTML: string = `
   </div>
 </div>
 
-<iframe style="border: none; flex-grow: 1; width: 100%; overflow-x: hidden; overflow-y: auto;" loading="eager" margin="0" padding="0"  width="100%" height="100%" id="ohpIframe">
+<iframe style="border: none; flex-grow: 1; height: 100%; width: 100%; min-width: 0; overflow-x: auto; overflow-y: auto;" loading="eager" margin="0" padding="0" width="100%" height="100%" id="ohpIframe">
 </iframe>
 `;
 
